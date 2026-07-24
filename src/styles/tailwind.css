@@ -1,0 +1,118 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --background: #F8FAFC;
+  --foreground: #0F172A;
+  --primary: #1D4ED8;
+  --primary-foreground: #FFFFFF;
+  --secondary: #F1F5F9;
+  --secondary-foreground: #334155;
+  --accent: #0EA5E9;
+  --accent-foreground: #FFFFFF;
+  --muted: #F1F5F9;
+  --muted-foreground: #64748B;
+  --card: #FFFFFF;
+  --card-foreground: #0F172A;
+  --border: #E2E8F0;
+  --input: #E2E8F0;
+  --ring: #1D4ED8;
+  --radius: 0.625rem;
+  --font-sans: var(--font-plus-jakarta-sans), sans-serif;
+
+  --health-excellent: #16A34A;
+  --health-good: #65A30D;
+  --health-fair: #D97706;
+  --health-poor: #DC2626;
+
+  --priority-critical: #DC2626;
+  --priority-high: #EA580C;
+  --priority-medium: #D97706;
+  --priority-low: #64748B;
+
+  --stage-signed: #6366F1;
+  --stage-kickoff: #8B5CF6;
+  --stage-setup: #0EA5E9;
+  --stage-config: #0284C7;
+  --stage-training: #059669;
+  --stage-firstlogin: #16A34A;
+  --stage-firstvalue: #65A30D;
+  --stage-golive: #1D4ED8;
+  --stage-handoff: #0F172A;
+}
+
+@layer base {
+  * {
+    box-sizing: border-box;
+    border-color: var(--border);
+  }
+
+  body {
+    background-color: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+
+  h1, h2, h3, h4, h5, h6, p {
+    margin: 0;
+  }
+}
+
+@layer utilities {
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .health-excellent { color: var(--health-excellent); }
+  .health-good { color: var(--health-good); }
+  .health-fair { color: var(--health-fair); }
+  .health-poor { color: var(--health-poor); }
+
+  .bg-health-excellent { background-color: #DCFCE7; }
+  .bg-health-good { background-color: #ECFCCB; }
+  .bg-health-fair { background-color: #FEF3C7; }
+  .bg-health-poor { background-color: #FEE2E2; }
+
+  .text-health-excellent { color: var(--health-excellent); }
+  .text-health-good { color: var(--health-good); }
+  .text-health-fair { color: var(--health-fair); }
+  .text-health-poor { color: var(--health-poor); }
+
+  .sidebar-transition {
+    transition: width 300ms ease;
+  }
+
+  .fade-in {
+    animation: fadeIn 200ms ease forwards;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(4px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .slide-up {
+    animation: slideUp 200ms ease forwards;
+  }
+
+  @keyframes slideUp {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .pulse-highlight {
+    animation: pulseHighlight 600ms ease;
+  }
+
+  @keyframes pulseHighlight {
+    0% { background-color: transparent; }
+    30% { background-color: #DBEAFE; }
+    100% { background-color: transparent; }
+  }
+}
