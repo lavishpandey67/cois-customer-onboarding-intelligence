@@ -58,49 +58,49 @@ const navItems: NavItem[] = [
   {
     id: 'nav-timeline',
     label: 'Customer Timeline',
-    href: '#',
+    href: '/customer-timeline',
     icon: <GitBranch size={18} />,
     group: 'core',
   },
   {
     id: 'nav-milestones',
     label: 'Milestones',
-    href: '#',
+    href: '/milestones',
     icon: <Flag size={18} />,
     group: 'core',
   },
   {
     id: 'nav-knowledge',
     label: 'Knowledge Base',
-    href: '#',
+    href: '/knowledge-base',
     icon: <BookOpen size={18} />,
     group: 'insights',
   },
   {
     id: 'nav-reports',
     label: 'Reports',
-    href: '#',
+    href: '/reports',
     icon: <BarChart2 size={18} />,
     group: 'insights',
   },
   {
     id: 'nav-analytics',
     label: 'Analytics',
-    href: '#',
+    href: '/analytics',
     icon: <TrendingUp size={18} />,
     group: 'insights',
   },
   {
     id: 'nav-ai',
     label: 'AI Assistant',
-    href: '#',
+    href: '/ai-assistant',
     icon: <Sparkles size={18} />,
     group: 'insights',
   },
   {
     id: 'nav-notifications',
     label: 'Notifications',
-    href: '#',
+    href: '/notifications',
     icon: <Bell size={18} />,
     badge: 8,
     group: 'system',
@@ -108,7 +108,7 @@ const navItems: NavItem[] = [
   {
     id: 'nav-admin',
     label: 'Administration',
-    href: '#',
+    href: '/administration',
     icon: <Settings size={18} />,
     group: 'system',
   },
@@ -219,12 +219,12 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
           }`}
         >
           <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-700 flex items-center justify-center flex-shrink-0">
-            AK
+            DU
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-xs font-600 text-foreground truncate">
-                Anika Kapoor
+                Demo User
               </p>
               <p className="text-xs text-muted-foreground truncate">
                 Ops Director

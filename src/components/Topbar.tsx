@@ -57,11 +57,11 @@ export default function Topbar({ title, subtitle }: TopbarProps) {
       {/* User menu */}
       <button className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted transition-all duration-150">
         <div className="w-7 h-7 rounded-full bg-primary text-primary-foreground text-xs font-700 flex items-center justify-center">
-          AK
+          DU
         </div>
         <div className="hidden sm:block text-left">
           <p className="text-xs font-600 text-foreground leading-tight">
-            Anika Kapoor
+            Demo User
           </p>
           <p className="text-xs text-muted-foreground leading-tight">
             Ops Director

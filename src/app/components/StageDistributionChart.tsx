@@ -51,42 +51,44 @@ export default function StageDistributionChart() {
           Distribution across 9 stages · 50 active customers
         </p>
       </div>
-      <ResponsiveContainer width="100%" height={220}>
-        <BarChart
-          data={stageDistributionData}
-          layout="vertical"
-          margin={{ top: 0, right: 8, left: 8, bottom: 0 }}
-        >
-          <CartesianGrid
-            strokeDasharray="3 3"
-            stroke="var(--border)"
-            horizontal={false}
-          />
-          <XAxis
-            type="number"
-            tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
-            axisLine={false}
-            tickLine={false}
-          />
-          <YAxis
-            dataKey="stage"
-            type="category"
-            tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
-            axisLine={false}
-            tickLine={false}
-            width={80}
-          />
-          <Tooltip content={<CustomTooltip />} />
-          <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={16}>
-            {stageDistributionData.map((entry, index) => (
-              <Cell
-                key={`cell-stage-${entry.stage}`}
-                fill={stageColors[index % stageColors.length]}
-              />
-            ))}
-          </Bar>
-        </BarChart>
-      </ResponsiveContainer>
+      <div className="w-full" style={{ minHeight: 220 }}>
+        <ResponsiveContainer width="100%" height={220}>
+          <BarChart
+            data={stageDistributionData}
+            layout="vertical"
+            margin={{ top: 0, right: 8, left: 8, bottom: 0 }}
+          >
+            <CartesianGrid
+              strokeDasharray="3 3"
+              stroke="var(--border)"
+              horizontal={false}
+            />
+            <XAxis
+              type="number"
+              tick={{ fontSize: 11, fill: 'var(--muted-foreground)' }}
+              axisLine={false}
+              tickLine={false}
+            />
+            <YAxis
+              dataKey="stage"
+              type="category"
+              tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }}
+              axisLine={false}
+              tickLine={false}
+              width={80}
+            />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="count" radius={[0, 4, 4, 0]} maxBarSize={16}>
+              {stageDistributionData.map((entry, index) => (
+                <Cell
+                  key={`cell-stage-${entry.stage}`}
+                  fill={stageColors[index % stageColors.length]}
+                />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
     </div>
   );
 }
