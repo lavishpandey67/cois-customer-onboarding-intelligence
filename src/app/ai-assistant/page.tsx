@@ -158,6 +158,10 @@ export default function AIAssistantPage() {
 
   return (
     <AppLayout title="AI Assistant" subtitle="Powered by COIS intelligence engine · portfolio data only">
+      {/* Demo notice */}
+      <div className="mb-4 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 italic">
+        This assistant displays pre-built sample responses for demonstration purposes.
+      </div>
       <div className="flex flex-col h-[calc(100vh-10rem)] max-h-[700px]">
         {/* Chat area */}
         <div className="flex-1 overflow-y-auto bg-card border border-border rounded-xl mb-4 p-4 space-y-4">

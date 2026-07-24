@@ -16,6 +16,10 @@ export default function ExecutiveDashboardPage() {
         <p className="text-sm italic text-muted-foreground -mt-2">
           NovaFlow Technologies — B2B SaaS platform | 50 active customer onboardings | Prototype case study
         </p>
+        {/* Disclaimer */}
+        <p className="text-xs italic text-muted-foreground -mt-4">
+          All data is sample/demonstration data. This is a portfolio prototype.
+        </p>
         <MetricsBentoGrid />
         <DashboardChartsRow />
         <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
