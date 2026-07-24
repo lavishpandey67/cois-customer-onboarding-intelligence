@@ -12,14 +12,29 @@ interface AppLayoutProps {
 
 function PortfolioBanner() {
   return (
-    <div className="w-full bg-slate-800 text-slate-200 text-xs py-2 px-4 flex items-center justify-center gap-1 flex-wrap text-center leading-relaxed z-30 flex-shrink-0">
-      <span>This is a portfolio project by <strong className="text-white">Lavish Pandey</strong> — AI Business Analyst student. COIS demonstrates customer onboarding operations design, KPI architecture, and AI-assisted risk detection.</span>
-      <span className="text-slate-400 mx-1">|</span>
+    <div className="w-full bg-navy-900 text-white text-xs py-1.5 px-4 flex items-center justify-center gap-1 flex-wrap text-center leading-relaxed z-30 flex-shrink-0" style={{ backgroundColor: '#0a1628' }}>
+      <span>Portfolio Project by{' '}
+        <a
+          href="https://linkedin.com/in/lavish-pandey-2846273a4"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="underline underline-offset-2 hover:text-blue-300 transition-colors font-semibold"
+        >
+          Lavish Pandey
+        </a>
+        {' '}— AI Business &amp; Operations Analyst
+      </span>
+      <span className="opacity-40 mx-1">|</span>
       <span>Built with Rocket.new</span>
-      <span className="text-slate-400 mx-1">|</span>
-      <a href="https://linkedin.com" target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:text-blue-200 underline underline-offset-2 transition-colors">View LinkedIn</a>
-      <span className="text-slate-400 mx-1">|</span>
-      <a href="https://github.com" target="_blank" rel="noopener noreferrer" className="text-blue-300 hover:text-blue-200 underline underline-offset-2 transition-colors">View GitHub</a>
+      <span className="opacity-40 mx-1">|</span>
+      <a
+        href="https://github.com/lavishpandey67"
+        target="_blank"
+        rel="noopener noreferrer"
+        className="hover:text-blue-300 transition-colors underline underline-offset-2"
+      >
+        GitHub: github.com/lavishpandey67
+      </a>
     </div>
   );
 }
@@ -28,7 +43,7 @@ function AppFooter() {
   return (
     <footer className="border-t border-border bg-card px-6 py-3 flex-shrink-0">
       <p className="text-xs text-muted-foreground text-center">
-        COIS — Customer Onboarding Intelligence System&nbsp;&nbsp;|&nbsp;&nbsp;Portfolio Project by Lavish Pandey&nbsp;&nbsp;|&nbsp;&nbsp;Built with Rocket.new&nbsp;&nbsp;|&nbsp;&nbsp;2026
+        COIS — Customer Onboarding Intelligence System&nbsp;&nbsp;|&nbsp;&nbsp;Portfolio Project by Lavish Pandey&nbsp;&nbsp;|&nbsp;&nbsp;2026
       </p>
     </footer>
   );

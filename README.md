@@ -1,91 +1,68 @@
-# Next.js
+# COIS — Customer Onboarding Intelligence System
 
-A modern Next.js 15 application built with TypeScript and Tailwind CSS.
+> A customer onboarding operations platform designed for B2B SaaS teams. Built to demonstrate product thinking, KPI architecture, and AI-assisted risk detection in a CS operations context.
 
-## 🚀 Features
+**Live Demo:** https://ciosprototype.netlify.app
 
-- **Next.js 15** - Latest version with improved performance and features
-- **React 19** - Latest React version with enhanced capabilities
-- **Tailwind CSS** - Utility-first CSS framework for rapid UI development
+---
 
-## 🛠️ Installation
+## The Problem
 
-1. Install dependencies:
-  ```bash
-  npm install
-  # or
-  yarn install
-  ```
+B2B SaaS companies lose significant ARR during customer onboarding. CS teams managing 30–80 simultaneous onboardings have no unified view of customer health, milestone progress, or risk signals — leading to delayed Go Lives, preventable churn, and missed expansion opportunities.
 
-2. Start the development server:
-  ```bash
-  npm run dev
-  # or
-  yarn dev
-  ```
-3. Open [http://localhost:4028](http://localhost:4028) with your browser to see the result.
+## What I Built
 
-## 📁 Project Structure
+A full CS operations platform with 9 working pages:
 
-```
-nextjs/
-├── public/             # Static assets
-├── src/
-│   ├── app/            # App router components
-│   │   ├── layout.tsx  # Root layout component
-│   │   └── page.tsx    # Main page component
-│   ├── components/     # Reusable UI components
-│   ├── styles/         # Global styles and Tailwind configuration
-├── next.config.mjs     # Next.js configuration
-├── package.json        # Project dependencies and scripts
-├── postcss.config.js   # PostCSS configuration
-└── tailwind.config.js  # Tailwind CSS configuration
+- **Executive Dashboard** — 8 KPI cards, 12-week Time-to-Value trend, AI insights with clickable modals, risk alert table
+- **Customer Management** — Health scoring (0–100), 9 onboarding stages, customer detail drawer
+- **Task Management** — Kanban board with Backlog / In Progress / Blocked / In Review
+- **Analytics** — Stage distribution, tier breakdown, operational intelligence charts
+- **Reports** — Pre-built at-risk customer report, monthly summary, TTV analysis
+- **AI Assistant** — Pre-built prompt interface with sample CS operations responses
+- **Customer Timeline** — Full event log across all customers with milestone tracking
+- **Milestones** — Stage-by-stage completion tracking across all 15 customers
+- **Knowledge Base, Notifications, Administration** — Supporting ops infrastructure
 
-```
+## Key Metrics Tracked
 
-## 🧩 Page Editing
+| Metric | Value | Note |
+|---|---|---|
+| Activation Rate | 74.2% | 37 of 50 customers reached First Value |
+| Avg Time to Value | 41 days | vs 52-day target |
+| Avg Health Score | 68.4 | 18 customers below 60 threshold |
+| Revenue at Risk | $632K | From 9 at-risk onboardings |
+| Onboarding CSAT | 4.3/5 | Based on 28 post-onboarding surveys |
 
-You can start editing the page by modifying `src/app/page.tsx`. The page auto-updates as you edit the file.
+## Design Decisions
 
-## 🎨 Styling
+**Why Time to Value as the primary metric?**
+TTV directly predicts long-term retention. Customers reaching First Value quickly show significantly higher 12-month retention rates.
 
-This project uses Tailwind CSS for styling with the following features:
-- Utility-first approach for rapid development
-- Custom theme configuration
-- Responsive design utilities
-- PostCSS and Autoprefixer integration
+**Why a 0–100 health score?**
+Traffic lights force binary decisions. A 0–100 scale shows direction of movement — a score dropping from 72 to 61 is a different conversation than one stable at 44.
 
-## 📦 Available Scripts
+**Why AI Insights as separate cards?**
+Inline alerts create alert fatigue. Dedicated cards with click-through review and Mark-as-Reviewed accountability increase action probability.
 
-- `npm run dev` - Start development server on port 4028
-- `npm run build` - Build the application for production
-- `npm run start` - Start the development server
-- `npm run serve` - Start the production server
-- `npm run lint` - Run ESLint to check code quality
-- `npm run lint:fix` - Fix ESLint issues automatically
-- `npm run format` - Format code with Prettier
+## What I Would Build Next
 
-## 📱 Deployment
+- Supabase backend replacing sample data
+- Live AI Assistant connected to Claude API
+- Slack/email alerts for risk triggers
+- Predictive churn model using milestone data
+- Customer-facing onboarding portal
+- CRM integration (Salesforce / HubSpot)
 
-Build the application for production:
+## Tech Stack
 
-  ```bash
-  npm run build
-  ```
+Next.js · Tailwind CSS · Recharts · Deployed on Netlify
 
-## 📚 Learn More
+## About
 
-To learn more about Next.js, take a look at the following resources:
+Built by **Lavish Pandey** as a portfolio project demonstrating business analysis, product design, and AI operations thinking.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial
+- Email: lavishpandey67@gmail.com
+- LinkedIn: linkedin.com/in/lavish-pandey-2846273a4
 
-You can check out the [Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## 🙏 Acknowledgments
-
-- Built with [Rocket.new](https://rocket.new)
-- Powered by Next.js and React
-- Styled with Tailwind CSS
-
-Built with ❤️ on Rocket.new
+> Note: All data is sample/demonstration data. This is a portfolio prototype built to demonstrate CS operations design thinking.
