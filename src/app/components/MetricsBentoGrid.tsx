@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown, Clock, HeartPulse, AlertTriangle, CheckCircle2, DollarSign, Star, Zap,  } from 'lucide-react';
+import { TrendingUp, TrendingDown, Clock, HeartPulse, AlertTriangle, CheckCircle2, DollarSign, Star, Zap } from 'lucide-react';
 
 interface KPICardProps {
   id: string;
@@ -10,6 +10,25 @@ interface KPICardProps {
   icon: React.ReactNode;
   variant?: 'default' | 'alert' | 'warning' | 'positive' | 'hero';
   colSpan?: string;
+  tooltip: string;
+}
+
+function InfoTooltip({ text, variant }: { text: string; variant: string }) {
+  const isHero = variant === 'hero';
+  return (
+    <span className="relative group inline-flex items-center ml-1">
+      <span
+        className={`cursor-help text-xs select-none ${isHero ? 'text-primary-foreground/60 hover:text-primary-foreground' : 'text-muted-foreground hover:text-foreground'} transition-colors`}
+        aria-label="More information"
+      >
+        ⓘ
+      </span>
+      <span className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-56 bg-popover border border-border text-popover-foreground text-xs rounded-lg px-3 py-2 shadow-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-150 z-50 leading-relaxed">
+        {text}
+        <span className="absolute top-full left-1/2 -translate-x-1/2 border-4 border-transparent border-t-border" />
+      </span>
+    </span>
+  );
 }
 
 function KPICard({
@@ -20,6 +39,7 @@ function KPICard({
   icon,
   variant = 'default',
   colSpan = '',
+  tooltip,
 }: KPICardProps) {
   const variantStyles = {
     default: 'bg-card border-border',
@@ -35,18 +55,19 @@ function KPICard({
   const subColor =
     variant === 'hero' ? 'text-primary-foreground/60' : 'text-muted-foreground';
   const iconBg =
-    variant === 'hero' ?'bg-primary-foreground/20 text-primary-foreground'
-      : variant === 'alert' ?'bg-red-100 text-red-600'
-      : variant === 'warning' ?'bg-amber-100 text-amber-600'
-      : variant === 'positive' ?'bg-green-100 text-green-700' :'bg-muted text-muted-foreground';
+    variant === 'hero' ? 'bg-primary-foreground/20 text-primary-foreground'
+      : variant === 'alert' ? 'bg-red-100 text-red-600'
+      : variant === 'warning' ? 'bg-amber-100 text-amber-600'
+      : variant === 'positive' ? 'bg-green-100 text-green-700' : 'bg-muted text-muted-foreground';
 
   return (
     <div
       className={`rounded-xl border p-5 flex flex-col justify-between ${variantStyles[variant]} ${colSpan}`}
     >
       <div className="flex items-start justify-between mb-3">
-        <p className={`text-xs font-600 uppercase tracking-wider ${labelColor}`}>
+        <p className={`text-xs font-600 uppercase tracking-wider ${labelColor} flex items-center`}>
           {label}
+          <InfoTooltip text={tooltip} variant={variant} />
         </p>
         <div className={`w-8 h-8 rounded-lg flex items-center justify-center flex-shrink-0 ${iconBg}`}>
           {icon}
@@ -88,10 +109,6 @@ function KPICard({
 }
 
 export default function MetricsBentoGrid() {
-  // Grid plan: 8 cards → grid-cols-4
-  // Row 1: hero (2 cols) + 2 regular = 4 cols
-  // Row 2: 4 regular cards
-
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4">
       {/* Hero — Activation Rate — spans 2 cols */}
@@ -104,6 +121,7 @@ export default function MetricsBentoGrid() {
         icon={<Zap size={16} />}
         variant="hero"
         colSpan="sm:col-span-2 lg:col-span-2"
+        tooltip="Percentage of customers who have reached their First Value milestone. Target: above 70%."
       />
       {/* Time to Value */}
       <KPICard
@@ -114,6 +132,7 @@ export default function MetricsBentoGrid() {
         trend={{ direction: 'down', value: '−11 days', positive: true }}
         icon={<Clock size={16} />}
         variant="positive"
+        tooltip="Average days from contract signed to First Value milestone. Target: under 52 days."
       />
       {/* Health Score */}
       <KPICard
@@ -124,6 +143,7 @@ export default function MetricsBentoGrid() {
         trend={{ direction: 'down', value: '−2.3', positive: false }}
         icon={<HeartPulse size={16} />}
         variant="warning"
+        tooltip="Composite score 0-100 based on milestone progress, engagement, and support activity. Below 60 requires action."
       />
       {/* Customers At Risk */}
       <KPICard
@@ -134,6 +154,7 @@ export default function MetricsBentoGrid() {
         trend={{ direction: 'up', value: '+2', positive: false }}
         icon={<AlertTriangle size={16} />}
         variant="alert"
+        tooltip="Customers flagged for critical health issues requiring immediate intervention."
       />
       {/* Pending Tasks */}
       <KPICard
@@ -144,6 +165,7 @@ export default function MetricsBentoGrid() {
         trend={{ direction: 'up', value: '+3', positive: false }}
         icon={<CheckCircle2 size={16} />}
         variant="warning"
+        tooltip="Open issues requiring CS manager attention within 24 hours."
       />
       {/* Completion Rate */}
       <KPICard
@@ -154,6 +176,7 @@ export default function MetricsBentoGrid() {
         trend={{ direction: 'up', value: '+4.2%', positive: true }}
         icon={<TrendingUp size={16} />}
         variant="default"
+        tooltip="Percentage of milestones completed on schedule across all customers."
       />
       {/* Revenue Impact */}
       <KPICard
@@ -164,6 +187,7 @@ export default function MetricsBentoGrid() {
         trend={{ direction: 'up', value: '+$128K', positive: false }}
         icon={<DollarSign size={16} />}
         variant="alert"
+        tooltip="Total ARR from customers with health scores below 60 or escalated status."
       />
       {/* CSAT */}
       <KPICard
@@ -174,6 +198,7 @@ export default function MetricsBentoGrid() {
         trend={{ direction: 'up', value: '+0.2', positive: true }}
         icon={<Star size={16} />}
         variant="positive"
+        tooltip="Post-onboarding satisfaction score from customer surveys. Target: above 4.0/5."
       />
     </div>
   );

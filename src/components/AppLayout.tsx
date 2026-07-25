@@ -3,6 +3,8 @@
 import React, { useState } from 'react';
 import Sidebar from './Sidebar';
 import Topbar from './Topbar';
+import KeyboardShortcutsModal, { useKeyboardShortcuts } from './KeyboardShortcutsModal';
+import { Keyboard } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
@@ -49,8 +51,27 @@ function AppFooter() {
   );
 }
 
-export default function AppLayout({ children, title, subtitle }: AppLayoutProps) {
+function KeyboardFAB({ onClick }: { onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      title="Keyboard shortcuts (?)"
+      className="fixed bottom-6 right-6 z-40 w-10 h-10 rounded-full bg-card border border-border shadow-lg flex items-center justify-center text-muted-foreground hover:text-foreground hover:bg-muted transition-all duration-150"
+    >
+      <Keyboard size={16} />
+    </button>
+  );
+}
+
+function AppLayoutInner({ children, title, subtitle }: AppLayoutProps) {
   const [collapsed, setCollapsed] = useState(false);
+  const [shortcutsOpen, setShortcutsOpen] = useState(false);
+
+  useKeyboardShortcuts(
+    () => setShortcutsOpen(true),
+    () => setShortcutsOpen(false),
+    shortcutsOpen
+  );
 
   return (
     <div className="flex flex-col h-screen bg-background overflow-hidden">
@@ -67,6 +88,12 @@ export default function AppLayout({ children, title, subtitle }: AppLayoutProps)
           <AppFooter />
         </div>
       </div>
+      <KeyboardFAB onClick={() => setShortcutsOpen(true)} />
+      <KeyboardShortcutsModal isOpen={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
     </div>
   );
+}
+
+export default function AppLayout({ children, title, subtitle }: AppLayoutProps) {
+  return <AppLayoutInner title={title} subtitle={subtitle}>{children}</AppLayoutInner>;
 }
