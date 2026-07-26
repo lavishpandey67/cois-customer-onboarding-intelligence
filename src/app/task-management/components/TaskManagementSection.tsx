@@ -1,34 +1,26 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { LayoutGrid, List, Search, Filter, Plus, X, AlertTriangle,  } from 'lucide-react';
-import { tasks } from '@/lib/mockData';
+import React, { useState, useMemo, useEffect } from 'react';
+import { LayoutGrid, List, Search, Filter, Plus, X, AlertTriangle } from 'lucide-react';
 import type { Task } from '@/lib/mockData';
+import { fetchTasks, subscribeToTasks } from '@/lib/supabase/dataService';
 import KanbanBoard from './KanbanBoard';
 import TaskListView from './TaskListView';
 import TaskDetailModal from './TaskDetailModal';
 
-// Backend integration: replace tasks with /api/tasks?page=X&filters=...
-
 type ViewMode = 'kanban' | 'list';
 
 const OWNER_OPTIONS = [
-  'Sarah Chen',
-  'Marcus Webb',
-  'Priya Nair',
-  'Jordan Ellis',
-  'Aiko Tanaka',
-  'Daniel Osei',
-  'Lena Müller',
-  'Ryan Castillo',
-  'Fatima Al-Rashid',
-  'Chris Nakamura',
+  'Sarah Chen', 'Marcus Webb', 'Priya Nair', 'Jordan Ellis', 'Aiko Tanaka',
+  'Daniel Osei', 'Lena Müller', 'Ryan Castillo', 'Fatima Al-Rashid', 'Chris Nakamura',
 ];
 
 const PRIORITY_OPTIONS = ['Critical', 'High', 'Medium', 'Low'];
 const STATUS_OPTIONS = ['Backlog', 'In Progress', 'Blocked', 'In Review', 'Completed'];
 
 export default function TaskManagementSection() {
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [loading, setLoading] = useState(true);
   const [viewMode, setViewMode] = useState<ViewMode>('kanban');
   const [search, setSearch] = useState('');
   const [showFilters, setShowFilters] = useState(false);
@@ -37,6 +29,15 @@ export default function TaskManagementSection() {
   const [selectedStatuses, setSelectedStatuses] = useState<string[]>([]);
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [selectedTaskIds, setSelectedTaskIds] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    fetchTasks().then((data) => {
+      setTasks(data);
+      setLoading(false);
+    });
+    const unsub = subscribeToTasks((data) => setTasks(data));
+    return unsub;
+  }, []);
 
   const filtered = useMemo(() => {
     let data = [...tasks];
@@ -49,20 +50,13 @@ export default function TaskManagementSection() {
           t.owner.toLowerCase().includes(q)
       );
     }
-    if (selectedOwners.length)
-      data = data.filter((t) => selectedOwners.includes(t.owner));
-    if (selectedPriorities.length)
-      data = data.filter((t) => selectedPriorities.includes(t.priority));
-    if (selectedStatuses.length)
-      data = data.filter((t) => selectedStatuses.includes(t.status));
+    if (selectedOwners.length) data = data.filter((t) => selectedOwners.includes(t.owner));
+    if (selectedPriorities.length) data = data.filter((t) => selectedPriorities.includes(t.priority));
+    if (selectedStatuses.length) data = data.filter((t) => selectedStatuses.includes(t.status));
     return data;
-  }, [search, selectedOwners, selectedPriorities, selectedStatuses]);
+  }, [tasks, search, selectedOwners, selectedPriorities, selectedStatuses]);
 
-  function toggleFilter(
-    arr: string[],
-    setArr: (v: string[]) => void,
-    val: string
-  ) {
+  function toggleFilter(arr: string[], setArr: (v: string[]) => void, val: string) {
     setArr(arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val]);
   }
 
@@ -73,11 +67,20 @@ export default function TaskManagementSection() {
     setSearch('');
   }
 
-  const activeFilterCount =
-    selectedOwners.length + selectedPriorities.length + selectedStatuses.length;
-
+  const activeFilterCount = selectedOwners.length + selectedPriorities.length + selectedStatuses.length;
   const escalatedCount = filtered.filter((t) => t.isEscalated).length;
   const blockedCount = filtered.filter((t) => t.status === 'Blocked').length;
+
+  if (loading) {
+    return (
+      <div className="bg-card border border-border rounded-xl p-12 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading tasks…</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-4">
@@ -85,26 +88,19 @@ export default function TaskManagementSection() {
       <div className="flex items-center gap-4 flex-wrap">
         <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-lg px-3 py-2">
           <AlertTriangle size={13} className="text-red-600" />
-          <span className="text-xs font-600 text-red-700">
-            {blockedCount} Blocked
-          </span>
+          <span className="text-xs font-600 text-red-700">{blockedCount} Blocked</span>
         </div>
         <div className="flex items-center gap-2 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2">
           <AlertTriangle size={13} className="text-amber-600" />
-          <span className="text-xs font-600 text-amber-700">
-            {escalatedCount} Escalated
-          </span>
+          <span className="text-xs font-600 text-amber-700">{escalatedCount} Escalated</span>
         </div>
         <div className="flex items-center gap-2 bg-muted border border-border rounded-lg px-3 py-2">
-          <span className="text-xs font-600 text-muted-foreground">
-            {filtered.length} tasks shown
-          </span>
+          <span className="text-xs font-600 text-muted-foreground">{filtered.length} tasks shown</span>
         </div>
       </div>
 
       {/* Toolbar */}
       <div className="flex items-center gap-3 flex-wrap">
-        {/* Search */}
         <div className="flex items-center gap-2 bg-card border border-border rounded-lg px-3 py-2 flex-1 min-w-52">
           <Search size={14} className="text-muted-foreground flex-shrink-0" />
           <input
@@ -120,8 +116,6 @@ export default function TaskManagementSection() {
             </button>
           )}
         </div>
-
-        {/* Filter */}
         <button
           onClick={() => setShowFilters((v) => !v)}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-600 border transition-all duration-150 ${
@@ -132,35 +126,25 @@ export default function TaskManagementSection() {
           <Filter size={14} />
           Filters
           {activeFilterCount > 0 && (
-            <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full tabular-nums">
-              {activeFilterCount}
-            </span>
+            <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full tabular-nums">{activeFilterCount}</span>
           )}
         </button>
-
-        {/* View toggle */}
         <div className="flex items-center bg-card border border-border rounded-lg overflow-hidden">
           <button
             onClick={() => setViewMode('kanban')}
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-600 transition-all duration-150 ${
-              viewMode === 'kanban' ?'bg-primary text-primary-foreground' :'text-muted-foreground hover:bg-muted'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-600 transition-all duration-150 ${viewMode === 'kanban' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
           >
             <LayoutGrid size={13} />
             Kanban
           </button>
           <button
             onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-600 transition-all duration-150 ${
-              viewMode === 'list' ?'bg-primary text-primary-foreground' :'text-muted-foreground hover:bg-muted'
-            }`}
+            className={`flex items-center gap-1.5 px-3 py-2 text-xs font-600 transition-all duration-150 ${viewMode === 'list' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted'}`}
           >
             <List size={13} />
             List
           </button>
         </div>
-
-        {/* New task */}
         <button className="flex items-center gap-2 px-3 py-2 bg-primary text-primary-foreground rounded-lg text-sm font-600 hover:bg-primary/90 transition-colors active:scale-95 duration-150">
           <Plus size={14} />
           New Task
@@ -171,11 +155,8 @@ export default function TaskManagementSection() {
       {showFilters && (
         <div className="bg-card border border-border rounded-xl p-5 fade-in">
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {/* Owner */}
             <div>
-              <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">
-                Owner
-              </p>
+              <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">Owner</p>
               <div className="flex flex-wrap gap-1">
                 {OWNER_OPTIONS.map((o) => (
                   <button
@@ -192,18 +173,13 @@ export default function TaskManagementSection() {
                 ))}
               </div>
             </div>
-            {/* Priority */}
             <div>
-              <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">
-                Priority
-              </p>
+              <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">Priority</p>
               <div className="flex flex-wrap gap-1">
                 {PRIORITY_OPTIONS.map((p) => (
                   <button
                     key={`fprio-${p}`}
-                    onClick={() =>
-                      toggleFilter(selectedPriorities, setSelectedPriorities, p)
-                    }
+                    onClick={() => toggleFilter(selectedPriorities, setSelectedPriorities, p)}
                     className={`text-xs px-2 py-1 rounded-md border transition-all duration-100 ${
                       selectedPriorities.includes(p)
                         ? 'bg-primary text-primary-foreground border-primary'
@@ -215,18 +191,13 @@ export default function TaskManagementSection() {
                 ))}
               </div>
             </div>
-            {/* Status */}
             <div>
-              <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">
-                Status
-              </p>
+              <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">Status</p>
               <div className="flex flex-wrap gap-1">
                 {STATUS_OPTIONS.map((s) => (
                   <button
                     key={`fstatus-${s}`}
-                    onClick={() =>
-                      toggleFilter(selectedStatuses, setSelectedStatuses, s)
-                    }
+                    onClick={() => toggleFilter(selectedStatuses, setSelectedStatuses, s)}
                     className={`text-xs px-2 py-1 rounded-md border transition-all duration-100 ${
                       selectedStatuses.includes(s)
                         ? 'bg-primary text-primary-foreground border-primary'
@@ -240,79 +211,34 @@ export default function TaskManagementSection() {
             </div>
           </div>
           {activeFilterCount > 0 && (
-            <button
-              onClick={clearFilters}
-              className="mt-4 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-            >
+            <button onClick={clearFilters} className="mt-4 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
               <X size={12} /> Clear all filters
             </button>
           )}
         </div>
       )}
 
-      {/* Bulk action bar */}
-      {selectedTaskIds.size > 0 && (
-        <div className="flex items-center gap-3 px-5 py-3 bg-primary/5 border border-primary/20 rounded-xl slide-up">
-          <span className="text-sm font-600 text-primary tabular-nums">
-            {selectedTaskIds.size} selected
-          </span>
-          <div className="flex items-center gap-2 ml-4">
-            <button className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-600 hover:bg-primary/90 transition-colors">
-              Reassign Owner
-            </button>
-            <button className="text-xs px-3 py-1.5 rounded-lg border border-border text-secondary-foreground font-600 hover:bg-muted transition-colors">
-              Change Status
-            </button>
-            <button className="text-xs px-3 py-1.5 rounded-lg border border-red-200 text-red-600 font-600 hover:bg-red-50 transition-colors">
-              Escalate
-            </button>
-            <button
-              onClick={() => setSelectedTaskIds(new Set())}
-              className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-2"
-            >
-              <X size={14} />
-            </button>
-          </div>
-        </div>
-      )}
-
-      {/* Main view */}
+      {/* Board / List */}
       {viewMode === 'kanban' ? (
-        <KanbanBoard
-          tasks={filtered}
-          onTaskClick={setSelectedTask}
-          selectedIds={selectedTaskIds}
-          onToggleSelect={(id) => {
-            setSelectedTaskIds((prev) => {
-              const next = new Set(prev);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            });
-          }}
-        />
+        <KanbanBoard tasks={filtered} onTaskClick={setSelectedTask} selectedTaskIds={selectedTaskIds} onToggleSelect={(id) => {
+          setSelectedTaskIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+          });
+        }} />
       ) : (
-        <TaskListView
-          tasks={filtered}
-          onTaskClick={setSelectedTask}
-          selectedIds={selectedTaskIds}
-          onToggleSelect={(id) => {
-            setSelectedTaskIds((prev) => {
-              const next = new Set(prev);
-              if (next.has(id)) next.delete(id);
-              else next.add(id);
-              return next;
-            });
-          }}
-        />
+        <TaskListView tasks={filtered} onTaskClick={setSelectedTask} selectedTaskIds={selectedTaskIds} onToggleSelect={(id) => {
+          setSelectedTaskIds((prev) => {
+            const next = new Set(prev);
+            if (next.has(id)) next.delete(id); else next.add(id);
+            return next;
+          });
+        }} />
       )}
 
-      {/* Task detail modal */}
       {selectedTask && (
-        <TaskDetailModal
-          task={selectedTask}
-          onClose={() => setSelectedTask(null)}
-        />
+        <TaskDetailModal task={selectedTask} onClose={() => setSelectedTask(null)} />
       )}
     </div>
   );

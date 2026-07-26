@@ -26,26 +26,25 @@ export const metadata: Metadata = {
   },
   openGraph: {
     type: 'website',
-    url: 'https://cois8196.builtwithrocket.new',
+    url: 'https://cois-fkeuw19.public.builtwithrocket.new',
     title: 'COIS — Customer Onboarding Intelligence System',
     description:
     'A customer onboarding operations platform demonstrating product thinking, KPI architecture, and AI-assisted risk detection. Portfolio project by Lavish Pandey — AI Business & Operations Analyst.',
     siteName: 'COIS Portfolio Project',
     images: [
     {
-      url: "https://img.rocket.new/generatedImages/rocket_gen_img_15b300c03-1764660631226.png",
+      url: "https://img.rocket.new/generatedImages/rocket_gen_img_117049a49-1770819374346.png",
       width: 1200,
       height: 630,
       alt: 'COIS — Customer Onboarding Intelligence System dashboard preview'
     }]
-
   },
   twitter: {
     card: 'summary_large_image',
     title: 'COIS — Customer Onboarding Intelligence System',
     description:
     'A customer onboarding operations platform demonstrating product thinking, KPI architecture, and AI-assisted risk detection. Portfolio project by Lavish Pandey — AI Business & Operations Analyst.',
-    images: ['https://cois8196.builtwithrocket.new/assets/images/app_logo.png'],
+    images: ['https://cois-fkeuw19.public.builtwithrocket.new/assets/images/app_logo.png'],
     creator: '@lavishpandey67'
   }
 };
