@@ -222,8 +222,8 @@ export default function TaskDetailModal({ task, onClose }: TaskDetailModalProps)
                   },
                   {
                     id: 'cmt-2',
-                    author: 'Anika Kapoor',
-                    initials: 'AK',
+                    author: 'Demo User',
+                    initials: 'DU',
                     text: 'Flagged for review. Please provide an updated ETA by end of day.',
                     time: 'Jul 21, 3:15 PM',
                   },

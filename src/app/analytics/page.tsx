@@ -2,7 +2,8 @@
 
 import React from 'react';
 import AppLayout from '@/components/AppLayout';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Cell, Legend,  } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Cell, Legend } from 'recharts';
+import PDFExportButton from '@/components/PDFExportButton';
 
 const stageData = [
   { stage: 'Contract Signed', count: 3 },
@@ -48,6 +49,16 @@ export default function AnalyticsPage() {
   return (
     <AppLayout title="Analytics" subtitle="Operational intelligence · 50 active customers · Jul 2026">
       <div className="space-y-6">
+        {/* Export header */}
+        <div className="flex items-center justify-end">
+          <PDFExportButton
+            targetId="analytics-content"
+            filename="cois-analytics-report"
+            label="Export Analytics PDF"
+          />
+        </div>
+
+        <div id="analytics-content">
         {/* Row 1 */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
           {/* Stage Distribution */}
@@ -94,7 +105,7 @@ export default function AnalyticsPage() {
         </div>
 
         {/* Row 2 */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
           {/* Churn Risk by Tier */}
           <div className="bg-card border border-border rounded-xl p-5">
             <div className="mb-4">
@@ -134,6 +145,7 @@ export default function AnalyticsPage() {
               </BarChart>
             </ResponsiveContainer>
           </div>
+        </div>
         </div>
       </div>
     </AppLayout>

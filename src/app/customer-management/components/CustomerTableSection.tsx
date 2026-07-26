@@ -1,15 +1,13 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
-import { Search, Filter, Download, ChevronUp, ChevronDown, ChevronsUpDown, Eye, Pencil, Sparkles, ChevronLeft, ChevronRight, X,  } from 'lucide-react';
-import { customers } from '@/lib/mockData';
+import React, { useState, useEffect, useMemo } from 'react';
+import { Search, Filter, Download, ChevronUp, ChevronDown, ChevronsUpDown, Eye, ChevronLeft, ChevronRight, X } from 'lucide-react';
 import type { Customer, OnboardingStage, CustomerTier, Region, HealthBand } from '@/lib/mockData';
+import { fetchCustomers, subscribeToCustomers } from '@/lib/supabase/dataService';
 import HealthScoreBadge from '@/components/ui/HealthScoreBadge';
 import StageBadge from '@/components/ui/StageBadge';
 import Badge from '@/components/ui/Badge';
 import CustomerDrawer from './CustomerDrawer';
-
-// Backend integration: replace customers with /api/customers?page=X&filters=...
 
 type SortField = keyof Customer;
 type SortDir = 'asc' | 'desc';
@@ -26,6 +24,8 @@ const RISK_OPTIONS = ['Low', 'Medium', 'High', 'Critical'];
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 export default function CustomerTableSection() {
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [selectedStages, setSelectedStages] = useState<string[]>([]);
   const [selectedTiers, setSelectedTiers] = useState<string[]>([]);
@@ -40,6 +40,15 @@ export default function CustomerTableSection() {
   const [drawerCustomer, setDrawerCustomer] = useState<Customer | null>(null);
   const [showFilters, setShowFilters] = useState(false);
 
+  useEffect(() => {
+    fetchCustomers().then((data) => {
+      setCustomers(data);
+      setLoading(false);
+    });
+    const unsub = subscribeToCustomers((data) => setCustomers(data));
+    return unsub;
+  }, []);
+
   const filtered = useMemo(() => {
     let data = [...customers];
     if (search) {
@@ -51,16 +60,11 @@ export default function CustomerTableSection() {
           c.manager.toLowerCase().includes(q)
       );
     }
-    if (selectedStages.length)
-      data = data.filter((c) => selectedStages.includes(c.stage));
-    if (selectedTiers.length)
-      data = data.filter((c) => selectedTiers.includes(c.tier));
-    if (selectedRegions.length)
-      data = data.filter((c) => selectedRegions.includes(c.region));
-    if (selectedHealth.length)
-      data = data.filter((c) => selectedHealth.includes(c.healthBand));
-    if (selectedRisk.length)
-      data = data.filter((c) => selectedRisk.includes(c.riskLevel));
+    if (selectedStages.length) data = data.filter((c) => selectedStages.includes(c.stage));
+    if (selectedTiers.length) data = data.filter((c) => selectedTiers.includes(c.tier));
+    if (selectedRegions.length) data = data.filter((c) => selectedRegions.includes(c.region));
+    if (selectedHealth.length) data = data.filter((c) => selectedHealth.includes(c.healthBand));
+    if (selectedRisk.length) data = data.filter((c) => selectedRisk.includes(c.riskLevel));
 
     data.sort((a, b) => {
       const av = a[sortField];
@@ -73,7 +77,7 @@ export default function CustomerTableSection() {
         : String(bv).localeCompare(String(av));
     });
     return data;
-  }, [search, selectedStages, selectedTiers, selectedRegions, selectedHealth, selectedRisk, sortField, sortDir]);
+  }, [customers, search, selectedStages, selectedTiers, selectedRegions, selectedHealth, selectedRisk, sortField, sortDir]);
 
   const totalPages = Math.ceil(filtered.length / pageSize);
   const paged = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -105,11 +109,7 @@ export default function CustomerTableSection() {
     }
   }
 
-  function toggleFilter(
-    arr: string[],
-    setArr: (v: string[]) => void,
-    val: string
-  ) {
+  function toggleFilter(arr: string[], setArr: (v: string[]) => void, val: string) {
     setArr(arr.includes(val) ? arr.filter((x) => x !== val) : [...arr, val]);
     setPage(1);
   }
@@ -125,15 +125,11 @@ export default function CustomerTableSection() {
   }
 
   const activeFilterCount =
-    selectedStages.length +
-    selectedTiers.length +
-    selectedRegions.length +
-    selectedHealth.length +
-    selectedRisk.length;
+    selectedStages.length + selectedTiers.length + selectedRegions.length +
+    selectedHealth.length + selectedRisk.length;
 
   function SortIcon({ field }: { field: SortField }) {
-    if (sortField !== field)
-      return <ChevronsUpDown size={12} className="text-muted-foreground" />;
+    if (sortField !== field) return <ChevronsUpDown size={12} className="text-muted-foreground" />;
     return sortDir === 'asc' ? (
       <ChevronUp size={12} className="text-primary" />
     ) : (
@@ -141,24 +137,11 @@ export default function CustomerTableSection() {
     );
   }
 
-  function ColHeader({
-    label,
-    field,
-    className = '',
-  }: {
-    label: string;
-    field: SortField;
-    className?: string;
-  }) {
+  function ColHeader({ label, field, className = '' }: { label: string; field: SortField; className?: string }) {
     return (
-      <th
-        className={`text-left px-4 py-3 cursor-pointer select-none group ${className}`}
-        onClick={() => toggleSort(field)}
-      >
+      <th className={`text-left px-4 py-3 cursor-pointer select-none group ${className}`} onClick={() => toggleSort(field)}>
         <div className="flex items-center gap-1">
-          <span className="text-xs font-600 text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">
-            {label}
-          </span>
+          <span className="text-xs font-600 text-muted-foreground uppercase tracking-wider group-hover:text-foreground transition-colors">{label}</span>
           <SortIcon field={field} />
         </div>
       </th>
@@ -178,22 +161,29 @@ export default function CustomerTableSection() {
     Low: 'low',
   };
 
+  if (loading) {
+    return (
+      <div className="bg-card border border-border rounded-xl p-12 flex items-center justify-center">
+        <div className="flex flex-col items-center gap-3">
+          <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+          <p className="text-sm text-muted-foreground">Loading customers…</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <>
       <div className="bg-card border border-border rounded-xl overflow-hidden">
         {/* Toolbar */}
         <div className="flex items-center gap-3 px-5 py-4 border-b border-border flex-wrap">
-          {/* Search */}
           <div className="flex items-center gap-2 bg-muted rounded-lg px-3 py-2 flex-1 min-w-52">
             <Search size={14} className="text-muted-foreground flex-shrink-0" />
             <input
               type="text"
               placeholder="Search company, industry, manager…"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setPage(1);
-              }}
+              onChange={(e) => { setSearch(e.target.value); setPage(1); }}
               className="bg-transparent text-sm text-foreground placeholder-muted-foreground outline-none w-full"
             />
             {search && (
@@ -202,8 +192,6 @@ export default function CustomerTableSection() {
               </button>
             )}
           </div>
-
-          {/* Filter toggle */}
           <button
             onClick={() => setShowFilters((v) => !v)}
             className={`flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-600 border transition-all duration-150 ${
@@ -214,33 +202,22 @@ export default function CustomerTableSection() {
             <Filter size={14} />
             Filters
             {activeFilterCount > 0 && (
-              <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full tabular-nums">
-                {activeFilterCount}
-              </span>
+              <span className="bg-primary text-primary-foreground text-xs px-1.5 py-0.5 rounded-full tabular-nums">{activeFilterCount}</span>
             )}
           </button>
-
-          {/* Export */}
           <button className="flex items-center gap-2 px-3 py-2 rounded-lg text-sm font-600 border border-border text-secondary-foreground hover:bg-muted transition-all duration-150">
             <Download size={14} />
             Export
           </button>
-
-          {/* Count */}
-          <span className="text-sm text-muted-foreground tabular-nums ml-auto">
-            {filtered.length} customers
-          </span>
+          <span className="text-sm text-muted-foreground tabular-nums ml-auto">{filtered.length} customers</span>
         </div>
 
         {/* Filter bar */}
         {showFilters && (
           <div className="px-5 py-4 border-b border-border bg-muted/30 fade-in">
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
-              {/* Stage */}
               <div>
-                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">
-                  Stage
-                </p>
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">Stage</p>
                 <div className="flex flex-wrap gap-1">
                   {STAGE_OPTIONS.map((s) => (
                     <button
@@ -257,11 +234,8 @@ export default function CustomerTableSection() {
                   ))}
                 </div>
               </div>
-              {/* Tier */}
               <div>
-                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">
-                  Tier
-                </p>
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">Tier</p>
                 <div className="flex flex-wrap gap-1">
                   {TIER_OPTIONS.map((t) => (
                     <button
@@ -278,11 +252,8 @@ export default function CustomerTableSection() {
                   ))}
                 </div>
               </div>
-              {/* Region */}
               <div>
-                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">
-                  Region
-                </p>
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">Region</p>
                 <div className="flex flex-wrap gap-1">
                   {REGION_OPTIONS.map((r) => (
                     <button
@@ -299,17 +270,14 @@ export default function CustomerTableSection() {
                   ))}
                 </div>
               </div>
-              {/* Health */}
               <div>
-                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">
-                  Health
-                </p>
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">Health</p>
                 <div className="flex flex-wrap gap-1">
                   {HEALTH_OPTIONS.map((h) => (
                     <button
                       key={`filter-health-${h}`}
                       onClick={() => toggleFilter(selectedHealth, setSelectedHealth, h)}
-                      className={`text-xs px-2 py-1 rounded-md border capitalize transition-all duration-100 ${
+                      className={`text-xs px-2 py-1 rounded-md border transition-all duration-100 capitalize ${
                         selectedHealth.includes(h)
                           ? 'bg-primary text-primary-foreground border-primary'
                           : 'border-border text-secondary-foreground hover:bg-muted'
@@ -320,11 +288,8 @@ export default function CustomerTableSection() {
                   ))}
                 </div>
               </div>
-              {/* Risk */}
               <div>
-                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">
-                  Risk
-                </p>
+                <p className="text-xs font-600 text-muted-foreground uppercase tracking-wider mb-2">Risk</p>
                 <div className="flex flex-wrap gap-1">
                   {RISK_OPTIONS.map((r) => (
                     <button
@@ -343,290 +308,121 @@ export default function CustomerTableSection() {
               </div>
             </div>
             {activeFilterCount > 0 && (
-              <button
-                onClick={clearAllFilters}
-                className="mt-3 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors"
-              >
+              <button onClick={clearAllFilters} className="mt-3 text-xs text-muted-foreground hover:text-foreground flex items-center gap-1 transition-colors">
                 <X size={12} /> Clear all filters
               </button>
             )}
           </div>
         )}
 
-        {/* Bulk action bar */}
-        {selectedRows.size > 0 && (
-          <div className="flex items-center gap-3 px-5 py-3 bg-primary/5 border-b border-primary/20 slide-up">
-            <span className="text-sm font-600 text-primary tabular-nums">
-              {selectedRows.size} selected
-            </span>
-            <div className="flex items-center gap-2 ml-4">
-              <button className="text-xs px-3 py-1.5 rounded-lg bg-primary text-primary-foreground font-600 hover:bg-primary/90 transition-colors">
-                Reassign Manager
-              </button>
-              <button className="text-xs px-3 py-1.5 rounded-lg border border-border text-secondary-foreground font-600 hover:bg-muted transition-colors">
-                Export Selected
-              </button>
-              <button className="text-xs px-3 py-1.5 rounded-lg border border-border text-secondary-foreground font-600 hover:bg-muted transition-colors">
-                Generate AI Summary
-              </button>
-              <button
-                onClick={() => setSelectedRows(new Set())}
-                className="text-xs text-muted-foreground hover:text-foreground transition-colors ml-2"
-              >
-                <X size={14} />
-              </button>
-            </div>
-          </div>
-        )}
-
         {/* Table */}
         <div className="overflow-x-auto">
-          <table className="w-full text-sm min-w-[1100px]">
+          <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-border bg-muted/30">
+              <tr className="border-b border-border bg-muted/40">
                 <th className="px-4 py-3 w-10">
                   <input
                     type="checkbox"
-                    checked={selectedRows.size === paged.length && paged.length > 0}
+                    checked={paged.length > 0 && selectedRows.size === paged.length}
                     onChange={toggleAll}
-                    className="rounded border-border accent-primary"
+                    className="rounded border-border"
                   />
                 </th>
                 <ColHeader label="Company" field="company" />
-                <ColHeader label="Industry" field="industry" />
-                <ColHeader label="Tier" field="tier" />
-                <ColHeader label="Health" field="healthScore" />
                 <ColHeader label="Stage" field="stage" />
-                <ColHeader label="Progress" field="progress" />
+                <ColHeader label="Health" field="healthScore" />
+                <ColHeader label="Risk" field="riskLevel" />
+                <ColHeader label="Tier" field="tier" />
                 <ColHeader label="Manager" field="manager" />
                 <ColHeader label="Days in Stage" field="daysInStage" />
-                <ColHeader label="Risk" field="riskLevel" />
-                <th className="px-4 py-3 w-24">
-                  <span className="text-xs font-600 text-muted-foreground uppercase tracking-wider">
-                    Actions
-                  </span>
-                </th>
+                <ColHeader label="ARR" field="contractValue" />
+                <th className="px-4 py-3 text-left text-xs font-600 text-muted-foreground uppercase tracking-wider">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {paged.length === 0 ? (
-                <tr>
-                  <td colSpan={11} className="px-4 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-muted flex items-center justify-center">
-                        <Search size={20} className="text-muted-foreground" />
-                      </div>
-                      <p className="text-sm font-600 text-foreground">
-                        No customers match your filters
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Try adjusting your search or filter criteria
-                      </p>
-                      <button
-                        onClick={clearAllFilters}
-                        className="text-xs text-primary font-600 hover:underline"
-                      >
-                        Clear all filters
+              {paged.map((c, i) => (
+                <tr
+                  key={c.id}
+                  className={`border-b border-border last:border-0 hover:bg-muted/40 transition-colors ${i % 2 === 0 ? '' : 'bg-muted/20'}`}
+                >
+                  <td className="px-4 py-3">
+                    <input
+                      type="checkbox"
+                      checked={selectedRows.has(c.id)}
+                      onChange={() => toggleRow(c.id)}
+                      className="rounded border-border"
+                    />
+                  </td>
+                  <td className="px-4 py-3">
+                    <div>
+                      <p className="text-xs font-600 text-foreground leading-tight">{c.company}</p>
+                      <p className="text-xs text-muted-foreground mt-0.5">{c.industry}</p>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3"><StageBadge stage={c.stage} progress={c.progress} /></td>
+                  <td className="px-4 py-3"><HealthScoreBadge score={c.healthScore} band={c.healthBand} /></td>
+                  <td className="px-4 py-3"><Badge variant={riskVariant[c.riskLevel] as any}>{c.riskLevel}</Badge></td>
+                  <td className="px-4 py-3"><Badge variant={tierVariant[c.tier]}>{c.tier}</Badge></td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1.5">
+                      <div className="w-5 h-5 rounded-full bg-primary/10 text-primary text-xs font-700 flex items-center justify-center">{c.managerInitials}</div>
+                      <span className="text-xs text-foreground">{c.manager.split(' ')[0]}</span>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className={`text-xs font-600 tabular-nums ${c.daysInStage > 14 ? 'text-red-600' : c.daysInStage > 7 ? 'text-amber-600' : 'text-foreground'}`}>
+                      {c.daysInStage}d
+                    </span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <span className="text-xs font-600 tabular-nums text-foreground">${(c.contractValue / 1000).toFixed(0)}K</span>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-1">
+                      <button onClick={() => setDrawerCustomer(c)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="View details">
+                        <Eye size={13} />
                       </button>
                     </div>
                   </td>
                 </tr>
-              ) : (
-                paged.map((customer, i) => (
-                  <tr
-                    key={customer.id}
-                    className={`border-b border-border last:border-0 transition-colors duration-100 group ${
-                      selectedRows.has(customer.id)
-                        ? 'bg-primary/5'
-                        : i % 2 === 0
-                        ? 'hover:bg-muted/40' :'bg-muted/15 hover:bg-muted/40'
-                    }`}
-                  >
-                    <td className="px-4 py-3 w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedRows.has(customer.id)}
-                        onChange={() => toggleRow(customer.id)}
-                        className="rounded border-border accent-primary"
-                      />
-                    </td>
-                    {/* Company */}
-                    <td className="px-4 py-3">
-                      <div>
-                        <button
-                          onClick={() => setDrawerCustomer(customer)}
-                          className="font-600 text-foreground text-xs hover:text-primary transition-colors text-left"
-                        >
-                          {customer.company}
-                        </button>
-                        <p className="text-xs text-muted-foreground mt-0.5">
-                          {customer.region}
-                        </p>
-                      </div>
-                    </td>
-                    {/* Industry */}
-                    <td className="px-4 py-3">
-                      <span className="text-xs text-foreground">
-                        {customer.industry}
-                      </span>
-                    </td>
-                    {/* Tier */}
-                    <td className="px-4 py-3">
-                      <Badge variant={tierVariant[customer.tier]}>
-                        {customer.tier}
-                      </Badge>
-                    </td>
-                    {/* Health */}
-                    <td className="px-4 py-3">
-                      <HealthScoreBadge
-                        score={customer.healthScore}
-                        band={customer.healthBand}
-                        showBar
-                      />
-                    </td>
-                    {/* Stage */}
-                    <td className="px-4 py-3">
-                      <StageBadge stage={customer.stage} />
-                    </td>
-                    {/* Progress */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-20 h-1.5 bg-border rounded-full overflow-hidden">
-                          <div
-                            className="h-full rounded-full bg-primary transition-all duration-300"
-                            style={{ width: `${customer.progress}%` }}
-                          />
-                        </div>
-                        <span className="text-xs tabular-nums text-muted-foreground">
-                          {customer.progress}%
-                        </span>
-                      </div>
-                    </td>
-                    {/* Manager */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-6 h-6 rounded-full bg-primary/10 text-primary text-xs font-700 flex items-center justify-center flex-shrink-0">
-                          {customer.managerInitials}
-                        </div>
-                        <span className="text-xs text-foreground">
-                          {customer.manager.split(' ')[0]}
-                        </span>
-                      </div>
-                    </td>
-                    {/* Days in Stage */}
-                    <td className="px-4 py-3">
-                      <span
-                        className={`text-xs font-600 tabular-nums ${
-                          customer.daysInStage >= 14
-                            ? 'text-red-600'
-                            : customer.daysInStage >= 8
-                            ? 'text-amber-600' :'text-muted-foreground'
-                        }`}
-                      >
-                        {customer.daysInStage}d
-                      </span>
-                    </td>
-                    {/* Risk */}
-                    <td className="px-4 py-3">
-                      <Badge variant={riskVariant[customer.riskLevel]}>
-                        {customer.riskLevel}
-                      </Badge>
-                    </td>
-                    {/* Actions */}
-                    <td className="px-4 py-3">
-                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity duration-150">
-                        <button
-                          onClick={() => setDrawerCustomer(customer)}
-                          title="View customer profile"
-                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-primary transition-all duration-100"
-                        >
-                          <Eye size={14} />
-                        </button>
-                        <button
-                          title="Edit customer"
-                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-all duration-100"
-                        >
-                          <Pencil size={14} />
-                        </button>
-                        <button
-                          title="AI summary"
-                          className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-primary transition-all duration-100"
-                        >
-                          <Sparkles size={14} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+              ))}
+              {paged.length === 0 && (
+                <tr>
+                  <td colSpan={10} className="px-4 py-8 text-center text-sm text-muted-foreground">No customers match your filters.</td>
+                </tr>
               )}
             </tbody>
           </table>
         </div>
 
         {/* Pagination */}
-        <div className="flex items-center justify-between px-5 py-4 border-t border-border flex-wrap gap-3">
+        <div className="flex items-center justify-between px-5 py-3 border-t border-border">
           <div className="flex items-center gap-2">
             <span className="text-xs text-muted-foreground">Rows per page:</span>
             <select
               value={pageSize}
-              onChange={(e) => {
-                setPageSize(Number(e.target.value));
-                setPage(1);
-              }}
-              className="text-xs border border-border rounded-md px-2 py-1 bg-card text-foreground outline-none focus:ring-2 focus:ring-primary/30"
+              onChange={(e) => { setPageSize(Number(e.target.value)); setPage(1); }}
+              className="text-xs bg-muted border border-border rounded px-2 py-1 text-foreground outline-none"
             >
-              {PAGE_SIZE_OPTIONS.map((s) => (
-                <option key={`pagesize-${s}`} value={s}>
-                  {s}
-                </option>
-              ))}
+              {PAGE_SIZE_OPTIONS.map((s) => <option key={s} value={s}>{s}</option>)}
             </select>
-            <span className="text-xs text-muted-foreground tabular-nums">
-              {(page - 1) * pageSize + 1}–
-              {Math.min(page * pageSize, filtered.length)} of {filtered.length}
-            </span>
           </div>
-          <div className="flex items-center gap-1">
-            <button
-              onClick={() => setPage((p) => Math.max(1, p - 1))}
-              disabled={page === 1}
-              className="p-1.5 rounded-md border border-border text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-100"
-            >
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-muted-foreground tabular-nums">
+              {filtered.length === 0 ? '0' : `${(page - 1) * pageSize + 1}–${Math.min(page * pageSize, filtered.length)}`} of {filtered.length}
+            </span>
+            <button onClick={() => setPage((p) => Math.max(1, p - 1))} disabled={page === 1} className="p-1 rounded hover:bg-muted disabled:opacity-40 text-muted-foreground hover:text-foreground transition-colors">
               <ChevronLeft size={14} />
             </button>
-            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
-              const pageNum = i + 1;
-              return (
-                <button
-                  key={`page-${pageNum}`}
-                  onClick={() => setPage(pageNum)}
-                  className={`w-7 h-7 rounded-md text-xs font-600 transition-all duration-100 ${
-                    page === pageNum
-                      ? 'bg-primary text-primary-foreground'
-                      : 'border border-border text-muted-foreground hover:bg-muted'
-                  }`}
-                >
-                  {pageNum}
-                </button>
-              );
-            })}
-            <button
-              onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
-              disabled={page === totalPages || totalPages === 0}
-              className="p-1.5 rounded-md border border-border text-muted-foreground hover:bg-muted disabled:opacity-40 disabled:cursor-not-allowed transition-all duration-100"
-            >
+            <button onClick={() => setPage((p) => Math.min(totalPages, p + 1))} disabled={page >= totalPages} className="p-1 rounded hover:bg-muted disabled:opacity-40 text-muted-foreground hover:text-foreground transition-colors">
               <ChevronRight size={14} />
             </button>
           </div>
         </div>
       </div>
 
-      {/* Customer detail drawer */}
       {drawerCustomer && (
-        <CustomerDrawer
-          customer={drawerCustomer}
-          onClose={() => setDrawerCustomer(null)}
-        />
+        <CustomerDrawer customer={drawerCustomer} onClose={() => setDrawerCustomer(null)} />
       )}
     </>
   );

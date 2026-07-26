@@ -34,7 +34,7 @@ const staticResponses: Record<string, string> = {
 3. Assign backup IT contacts for Starfield Media through their business sponsor`,
 
   'Summarize onboarding performance for Q1 2026': `**Q1 2026 Onboarding Performance Summary**
-*January – March 2026 · NovaFlow Technologies*
+*January – March 2026 · B2B SaaS Platform — Demo Environment*
 
 **Volume**
 • 23 new onboardings initiated

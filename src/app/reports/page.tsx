@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { FileText, AlertTriangle, TrendingUp, Download } from 'lucide-react';
+import PDFExportButton from '@/components/PDFExportButton';
 
 const monthlyData = [
   { month: 'Feb', started: 6, completed: 4, atRisk: 1 },
@@ -46,18 +47,54 @@ const severityColors: Record<string, string> = {
   Medium: 'bg-yellow-100 text-yellow-700',
 };
 
-const COLORS = ['#0EA5E9', '#16A34A', '#DC2626'];
-
 type ReportTab = 'monthly' | 'atrisk' | 'ttv';
+
+// CSV export helpers
+function downloadCSV(filename: string, rows: string[][]) {
+  const csv = rows.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportMonthlyCSV() {
+  const headers = ['Month', 'Onboardings Started', 'Onboardings Completed', 'At Risk'];
+  const rows = monthlyData.map(d => [d.month, String(d.started), String(d.completed), String(d.atRisk)]);
+  downloadCSV('monthly-onboarding-summary.csv', [headers, ...rows]);
+}
+
+function exportAtRiskCSV() {
+  const headers = ['Customer', 'Tier', 'Risk Score', 'Issue', 'ARR at Risk', 'Owner', 'Severity'];
+  const rows = atRiskCustomers.map(d => [d.company, d.tier, String(d.riskScore), d.issue, d.arr, d.owner, d.severity]);
+  downloadCSV('at-risk-customers.csv', [headers, ...rows]);
+}
+
+function exportTTVCSV() {
+  const headers = ['Stage', 'Avg Days'];
+  const rows = ttvBreakdown.map(d => [d.stage, String(d.avgDays)]);
+  downloadCSV('time-to-value-analysis.csv', [headers, ...rows]);
+}
 
 export default function ReportsPage() {
   const [activeTab, setActiveTab] = useState<ReportTab>('monthly');
 
-  const tabs: { id: ReportTab; label: string; icon: React.ReactNode }[] = [
-    { id: 'monthly', label: 'Monthly Onboarding Summary', icon: <FileText size={14} /> },
-    { id: 'atrisk', label: 'At-Risk Customer Report', icon: <AlertTriangle size={14} /> },
-    { id: 'ttv', label: 'Time-to-Value Analysis', icon: <TrendingUp size={14} /> },
+  const tabs: { id: ReportTab; label: string; icon: React.ReactNode; onExport: () => void }[] = [
+    { id: 'monthly', label: 'Monthly Onboarding Summary', icon: <FileText size={14} />, onExport: exportMonthlyCSV },
+    { id: 'atrisk', label: 'At-Risk Customer Report', icon: <AlertTriangle size={14} />, onExport: exportAtRiskCSV },
+    { id: 'ttv', label: 'Time-to-Value Analysis', icon: <TrendingUp size={14} />, onExport: exportTTVCSV },
   ];
+
+  const activeTabData = tabs.find(t => t.id === activeTab);
+
+  const pdfFilenames: Record<ReportTab, string> = {
+    monthly: 'monthly-onboarding-summary',
+    atrisk: 'at-risk-customer-report',
+    ttv: 'time-to-value-analysis',
+  };
 
   return (
     <AppLayout title="Reports" subtitle="Pre-built operational reports · July 2026">
@@ -76,11 +113,22 @@ export default function ReportsPage() {
               {tab.label}
             </button>
           ))}
-          <button className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-600 bg-muted text-muted-foreground hover:text-foreground transition-all">
-            <Download size={13} /> Export CSV
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={activeTabData?.onExport}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-600 bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all"
+            >
+              <Download size={13} /> Export CSV
+            </button>
+            <PDFExportButton
+              targetId="report-content"
+              filename={pdfFilenames[activeTab]}
+              variant="icon"
+            />
+          </div>
         </div>
 
+        <div id="report-content">
         {/* Monthly Onboarding Summary */}
         {activeTab === 'monthly' && (
           <div className="space-y-5">
@@ -99,7 +147,12 @@ export default function ReportsPage() {
               ))}
             </div>
             <div className="bg-card border border-border rounded-xl p-5">
-              <h3 className="text-sm font-700 text-foreground mb-4">Monthly Onboarding Activity (Feb–Jul 2026)</h3>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-700 text-foreground">Monthly Onboarding Activity (Feb–Jul 2026)</h3>
+                <button onClick={exportMonthlyCSV} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-600 bg-muted text-muted-foreground hover:text-foreground transition-all">
+                  <Download size={12} /> Export CSV
+                </button>
+              </div>
               <ResponsiveContainer width="100%" height={240}>
                 <BarChart data={monthlyData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -133,8 +186,11 @@ export default function ReportsPage() {
               ))}
             </div>
             <div className="bg-card border border-border rounded-xl overflow-hidden">
-              <div className="px-5 py-4 border-b border-border">
+              <div className="px-5 py-4 border-b border-border flex items-center justify-between">
                 <h3 className="text-sm font-700 text-foreground">At-Risk Customer Detail</h3>
+                <button onClick={exportAtRiskCSV} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-600 bg-muted text-muted-foreground hover:text-foreground transition-all">
+                  <Download size={12} /> Export CSV
+                </button>
               </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
@@ -187,7 +243,12 @@ export default function ReportsPage() {
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
               <div className="bg-card border border-border rounded-xl p-5">
-                <h3 className="text-sm font-700 text-foreground mb-4">TTV Trend vs Target (Feb–Jul 2026)</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-700 text-foreground">TTV Trend vs Target (Feb–Jul 2026)</h3>
+                  <button onClick={exportTTVCSV} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-600 bg-muted text-muted-foreground hover:text-foreground transition-all">
+                    <Download size={12} /> Export CSV
+                  </button>
+                </div>
                 <ResponsiveContainer width="100%" height={220}>
                   <LineChart data={ttvData} margin={{ top: 4, right: 4, left: -16, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" />
@@ -201,7 +262,9 @@ export default function ReportsPage() {
                 </ResponsiveContainer>
               </div>
               <div className="bg-card border border-border rounded-xl p-5">
-                <h3 className="text-sm font-700 text-foreground mb-4">Avg Days per Stage</h3>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-700 text-foreground">Avg Days per Stage</h3>
+                </div>
                 <ResponsiveContainer width="100%" height={220}>
                   <BarChart data={ttvBreakdown} layout="vertical" margin={{ top: 0, right: 8, left: 8, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" horizontal={false} />
@@ -215,6 +278,7 @@ export default function ReportsPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </AppLayout>
   );
