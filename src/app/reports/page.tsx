@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, LineChart, Line, Legend } from 'recharts';
 import { FileText, AlertTriangle, TrendingUp, Download } from 'lucide-react';
+import PDFExportButton from '@/components/PDFExportButton';
 
 const monthlyData = [
   { month: 'Feb', started: 6, completed: 4, atRisk: 1 },
@@ -89,6 +90,12 @@ export default function ReportsPage() {
 
   const activeTabData = tabs.find(t => t.id === activeTab);
 
+  const pdfFilenames: Record<ReportTab, string> = {
+    monthly: 'monthly-onboarding-summary',
+    atrisk: 'at-risk-customer-report',
+    ttv: 'time-to-value-analysis',
+  };
+
   return (
     <AppLayout title="Reports" subtitle="Pre-built operational reports · July 2026">
       <div className="space-y-6">
@@ -106,14 +113,22 @@ export default function ReportsPage() {
               {tab.label}
             </button>
           ))}
-          <button
-            onClick={activeTabData?.onExport}
-            className="ml-auto flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-600 bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all"
-          >
-            <Download size={13} /> Export CSV
-          </button>
+          <div className="ml-auto flex items-center gap-2">
+            <button
+              onClick={activeTabData?.onExport}
+              className="flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-600 bg-muted text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-all"
+            >
+              <Download size={13} /> Export CSV
+            </button>
+            <PDFExportButton
+              targetId="report-content"
+              filename={pdfFilenames[activeTab]}
+              variant="icon"
+            />
+          </div>
         </div>
 
+        <div id="report-content">
         {/* Monthly Onboarding Summary */}
         {activeTab === 'monthly' && (
           <div className="space-y-5">
@@ -263,6 +278,7 @@ export default function ReportsPage() {
             </div>
           </div>
         )}
+        </div>
       </div>
     </AppLayout>
   );

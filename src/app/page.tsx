@@ -7,6 +7,7 @@ import DashboardChartsRow from './components/DashboardChartsRow';
 import RiskAlertsTable from './components/RiskAlertsTable';
 import AIInsightsPanel from './components/AIInsightsPanel';
 import ActivityFeedPanel from './components/ActivityFeedPanel';
+import PDFExportButton from '@/components/PDFExportButton';
 
 function LiveTimestamp() {
   const [timestamp, setTimestamp] = useState('');
@@ -40,27 +41,39 @@ export default function ExecutiveDashboardPage() {
       subtitle=""
     >
       <div className="space-y-6">
-        {/* Live timestamp */}
-        <p className="text-xs text-muted-foreground -mt-4">
-          <LiveTimestamp />
-        </p>
-        {/* Company context */}
-        <p className="text-sm italic text-muted-foreground -mt-2">
-          NovaFlow Technologies — B2B SaaS platform | 50 active customer onboardings | Prototype case study
-        </p>
-        {/* Disclaimer */}
-        <p className="text-xs italic text-muted-foreground -mt-4">
-          All data is sample/demonstration data. This is a portfolio prototype.
-        </p>
-        <MetricsBentoGrid />
-        <DashboardChartsRow />
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2">
-            <RiskAlertsTable />
+        {/* Header row */}
+        <div className="flex items-start justify-between -mt-4">
+          <div>
+            <p className="text-xs text-muted-foreground">
+              <LiveTimestamp />
+            </p>
+            <p className="text-sm italic text-muted-foreground mt-1">
+              NovaFlow Technologies — B2B SaaS platform | 50 active customer onboardings | Prototype case study
+            </p>
+            <p className="text-xs italic text-muted-foreground mt-0.5">
+              All data is sample/demonstration data. This is a portfolio prototype.
+            </p>
           </div>
-          <div className="xl:col-span-1 space-y-6">
-            <AIInsightsPanel />
-            <ActivityFeedPanel />
+          <PDFExportButton
+            targetId="dashboard-content"
+            filename="executive-dashboard"
+            label="Export Dashboard PDF"
+          />
+        </div>
+
+        <div id="dashboard-content">
+          <MetricsBentoGrid />
+          <div className="mt-6">
+            <DashboardChartsRow />
+          </div>
+          <div className="grid grid-cols-1 xl:grid-cols-3 gap-6 mt-6">
+            <div className="xl:col-span-2">
+              <RiskAlertsTable />
+            </div>
+            <div className="xl:col-span-1 space-y-6">
+              <AIInsightsPanel />
+              <ActivityFeedPanel />
+            </div>
           </div>
         </div>
       </div>
