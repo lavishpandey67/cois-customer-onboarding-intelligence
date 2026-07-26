@@ -93,7 +93,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
         {!collapsed && (
           <div className="min-w-0">
             <span className="font-bold text-sm text-foreground tracking-tight block leading-tight">COIS</span>
-            <span className="text-xs text-muted-foreground leading-tight block truncate">NovaFlow Technologies</span>
+            <span className="text-xs text-muted-foreground leading-tight block truncate">B2B SaaS Platform — Demo Environment</span>
           </div>
         )}
       </div>

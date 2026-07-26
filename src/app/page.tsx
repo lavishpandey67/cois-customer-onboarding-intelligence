@@ -87,7 +87,7 @@ export default function ExecutiveDashboardPage() {
               <LiveTimestamp />
             </p>
             <p className="text-sm italic text-muted-foreground mt-1">
-              NovaFlow Technologies — B2B SaaS platform | 50 active customer onboardings | Prototype case study
+              B2B SaaS Platform — Demo Environment | 50 active customer onboardings | Prototype case study
             </p>
             <p className="text-xs italic text-muted-foreground mt-0.5">
               All data is sample/demonstration data. This is a portfolio prototype.

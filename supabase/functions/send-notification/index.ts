@@ -13,8 +13,8 @@ serve(async (req) => {
 
   try {
     const { type, to, data } = await req?.json();
-    const RESEND_API_KEY = (typeof Deno !== "undefined" ? Deno : globalThis?.Deno)?.env?.get("RESEND_API_KEY");
-    const SITE_URL = (typeof Deno !== "undefined" ? Deno : globalThis?.Deno)?.env?.get("SITE_URL") || "https://cois8196.builtwithrocket.new";
+    const RESEND_API_KEY = (typeof Deno !== "undefined" ? Deno : (globalThis as any)?.Deno)?.env?.get("RESEND_API_KEY");
+    const SITE_URL = (typeof Deno !== "undefined" ? Deno : (globalThis as any)?.Deno)?.env?.get("SITE_URL") || "https://cois8196.builtwithrocket.new";
 
     if (!RESEND_API_KEY) {
       throw new Error("RESEND_API_KEY is not configured");
@@ -29,7 +29,7 @@ serve(async (req) => {
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
           <div style="background: #0f172a; padding: 24px 32px; border-radius: 8px 8px 0 0;">
             <h1 style="color: #ffffff; font-size: 18px; margin: 0; font-weight: 700; letter-spacing: -0.3px;">COIS — Customer Onboarding Intelligence</h1>
-            <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">NovaFlow Technologies</p>
+            <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">B2B SaaS Platform — Demo Environment</p>
           </div>
           <div style="padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
             <div style="background: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 16px 20px; margin-bottom: 24px;">
@@ -66,7 +66,7 @@ serve(async (req) => {
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
           <div style="background: #0f172a; padding: 24px 32px; border-radius: 8px 8px 0 0;">
             <h1 style="color: #ffffff; font-size: 18px; margin: 0; font-weight: 700;">COIS — Customer Onboarding Intelligence</h1>
-            <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">NovaFlow Technologies</p>
+            <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">B2B SaaS Platform — Demo Environment</p>
           </div>
           <div style="padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
             <h2 style="font-size: 20px; color: #0f172a; margin: 0 0 12px; font-weight: 700;">You've been invited to join COIS</h2>
@@ -85,7 +85,7 @@ serve(async (req) => {
         <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; max-width: 600px; margin: 0 auto; background: #ffffff;">
           <div style="background: #0f172a; padding: 24px 32px; border-radius: 8px 8px 0 0;">
             <h1 style="color: #ffffff; font-size: 18px; margin: 0; font-weight: 700;">COIS — Customer Onboarding Intelligence</h1>
-            <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">NovaFlow Technologies</p>
+            <p style="color: #94a3b8; font-size: 13px; margin: 4px 0 0;">B2B SaaS Platform — Demo Environment</p>
           </div>
           <div style="padding: 32px; border: 1px solid #e2e8f0; border-top: none; border-radius: 0 0 8px 8px;">
             <h2 style="font-size: 20px; color: #0f172a; margin: 0 0 12px; font-weight: 700;">Reset your password</h2>

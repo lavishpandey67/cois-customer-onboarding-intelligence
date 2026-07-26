@@ -10,7 +10,7 @@ import { Eye, EyeOff, LogIn, AlertCircle, Mail, ArrowLeft, CheckCircle, Key } fr
 const DEMO_ACCOUNTS = [
   { label: 'Admin', email: 'admin@cois.app', password: 'Admin@2026', role: 'Full system access' },
   { label: 'CEO', email: 'ceo@cois.app', password: 'Ceo@2026', role: 'Executive dashboard + all reports' },
-  { label: 'Ops Director', email: 'ops@cois.app', password: 'Ops@2026', role: 'Operations + analytics' },
+  { label: 'Operations Analyst', email: 'ops@cois.app', password: 'Ops@2026', role: 'Operations + analytics' },
   { label: 'CS Manager', email: 'csmanager@cois.app', password: 'Csm@2026', role: 'Customer success + reports' },
   { label: 'CS Specialist', email: 'specialist@cois.app', password: 'Css@2026', role: 'Customers + tasks + AI' },
   { label: 'Support Agent', email: 'agent@cois.app', password: 'Agent@2026', role: 'Customers + tasks only' },
@@ -101,7 +101,7 @@ export default function LoginPage() {
           <AppLogo size={36} />
           <div>
             <span className="font-bold text-lg text-foreground tracking-tight block leading-tight">COIS</span>
-            <span className="text-xs text-muted-foreground">NovaFlow Technologies</span>
+            <span className="text-xs text-muted-foreground">B2B SaaS Platform — Demo Environment</span>
           </div>
         </div>
         <div className="space-y-6">
