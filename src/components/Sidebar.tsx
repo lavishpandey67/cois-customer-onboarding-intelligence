@@ -22,6 +22,9 @@ import {
   LogOut,
   HelpCircle,
   Lock,
+  Shield,
+  Clock,
+  UserCog,
 } from 'lucide-react';
 
 interface NavItem {
@@ -39,11 +42,14 @@ const navItems: NavItem[] = [
   { id: 'nav-tasks', label: 'Task Management', href: '/task-management', icon: <CheckSquare size={18} />, badge: 5, group: 'core' },
   { id: 'nav-timeline', label: 'Customer Timeline', href: '/customer-timeline', icon: <GitBranch size={18} />, group: 'core' },
   { id: 'nav-milestones', label: 'Milestones', href: '/milestones', icon: <Flag size={18} />, group: 'core' },
+  { id: 'nav-sla', label: 'SLA Tracker', href: '/sla-tracker', icon: <Clock size={18} />, group: 'core' },
   { id: 'nav-knowledge', label: 'Knowledge Base', href: '/knowledge-base', icon: <BookOpen size={18} />, group: 'insights' },
   { id: 'nav-reports', label: 'Reports', href: '/reports', icon: <BarChart2 size={18} />, group: 'insights' },
   { id: 'nav-analytics', label: 'Analytics', href: '/analytics', icon: <TrendingUp size={18} />, group: 'insights' },
   { id: 'nav-ai', label: 'AI Assistant', href: '/ai-assistant', icon: <Sparkles size={18} />, group: 'insights' },
   { id: 'nav-notifications', label: 'Notifications', href: '/notifications', icon: <Bell size={18} />, badge: 8, group: 'system' },
+  { id: 'nav-audit', label: 'Audit Log', href: '/audit-log', icon: <Shield size={18} />, group: 'system' },
+  { id: 'nav-team', label: 'Team Management', href: '/team-management', icon: <UserCog size={18} />, group: 'system' },
   { id: 'nav-admin', label: 'Administration', href: '/administration', icon: <Settings size={18} />, group: 'system' },
 ];
 

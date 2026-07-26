@@ -8,6 +8,8 @@ import RiskAlertsTable from './components/RiskAlertsTable';
 import AIInsightsPanel from './components/AIInsightsPanel';
 import ActivityFeedPanel from './components/ActivityFeedPanel';
 import PDFExportButton from '@/components/PDFExportButton';
+import { createClient } from '@/lib/supabase/client';
+import { Wifi, WifiOff } from 'lucide-react';
 
 function LiveTimestamp() {
   const [timestamp, setTimestamp] = useState('');
@@ -34,6 +36,43 @@ function LiveTimestamp() {
   return <span>{timestamp || 'Last updated: loading…'}</span>;
 }
 
+function RealtimeIndicator() {
+  const [connected, setConnected] = useState(false);
+  const [pulse, setPulse] = useState(false);
+  const supabase = createClient();
+
+  useEffect(() => {
+    const channel = supabase?.channel('dashboard_presence')?.on('postgres_changes', { event: '*', schema: 'public', table: 'customers' }, () => {
+        setPulse(true);
+        setTimeout(() => setPulse(false), 1500);
+      })?.subscribe((status) => {
+        setConnected(status === 'SUBSCRIBED');
+      });
+
+    return () => { supabase?.removeChannel(channel); };
+  }, []);
+
+  return (
+    <div className={`flex items-center gap-1.5 px-2.5 py-1 rounded-lg border text-xs font-600 transition-all ${
+      connected
+        ? 'bg-green-50 border-green-200 text-green-700' :'bg-muted border-border text-muted-foreground'
+    }`}>
+      {connected ? (
+        <>
+          <span className={`w-1.5 h-1.5 rounded-full bg-green-500 ${pulse ? 'animate-ping' : 'animate-pulse'}`} />
+          <Wifi size={11} />
+          Live
+        </>
+      ) : (
+        <>
+          <WifiOff size={11} />
+          Connecting…
+        </>
+      )}
+    </div>
+  );
+}
+
 export default function ExecutiveDashboardPage() {
   return (
     <AppLayout
@@ -42,7 +81,7 @@ export default function ExecutiveDashboardPage() {
     >
       <div className="space-y-6">
         {/* Header row */}
-        <div className="flex items-start justify-between -mt-4">
+        <div className="flex items-start justify-between -mt-4 flex-wrap gap-3">
           <div>
             <p className="text-xs text-muted-foreground">
               <LiveTimestamp />
@@ -54,11 +93,14 @@ export default function ExecutiveDashboardPage() {
               All data is sample/demonstration data. This is a portfolio prototype.
             </p>
           </div>
-          <PDFExportButton
-            targetId="dashboard-content"
-            filename="executive-dashboard"
-            label="Export Dashboard PDF"
-          />
+          <div className="flex items-center gap-2">
+            <RealtimeIndicator />
+            <PDFExportButton
+              targetId="dashboard-content"
+              filename="executive-dashboard"
+              label="Export Dashboard PDF"
+            />
+          </div>
         </div>
 
         <div id="dashboard-content">

@@ -1,41 +1,10 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Users, Bell, Shield, Check, X, Activity, Database, Cpu, Wifi, AlertTriangle, CheckCircle, Clock, RefreshCw, Server, Zap } from 'lucide-react';
-
-interface TeamMember {
-  id: string;
-  name: string;
-  initials: string;
-  email: string;
-  role: string;
-  department: string;
-  status: 'Active' | 'Inactive';
-  customers: number;
-}
-
-const teamMembers: TeamMember[] = [
-  { id: 'tm-001', name: 'Sarah Chen', initials: 'SC', email: 'sarah.chen@novaflow.com', role: 'Senior CS Manager', department: 'Customer Success', status: 'Active', customers: 6 },
-  { id: 'tm-002', name: 'Marcus Webb', initials: 'MW', email: 'marcus.webb@novaflow.com', role: 'CS Manager', department: 'Customer Success', status: 'Active', customers: 5 },
-  { id: 'tm-003', name: 'Priya Nair', initials: 'PN', email: 'priya.nair@novaflow.com', role: 'CS Specialist', department: 'Customer Success', status: 'Active', customers: 5 },
-  { id: 'tm-004', name: 'Jordan Ellis', initials: 'JE', email: 'jordan.ellis@novaflow.com', role: 'Implementation Specialist', department: 'Operations', status: 'Active', customers: 5 },
-  { id: 'tm-005', name: 'Aiko Tanaka', initials: 'AT', email: 'aiko.tanaka@novaflow.com', role: 'CS Manager', department: 'Customer Success', status: 'Active', customers: 5 },
-  { id: 'tm-006', name: 'Daniel Osei', initials: 'DO', email: 'daniel.osei@novaflow.com', role: 'Senior CS Manager', department: 'Customer Success', status: 'Active', customers: 6 },
-  { id: 'tm-007', name: 'Lena Müller', initials: 'LM', email: 'lena.muller@novaflow.com', role: 'CS Specialist', department: 'Customer Success', status: 'Active', customers: 5 },
-  { id: 'tm-008', name: 'Ryan Castillo', initials: 'RC', email: 'ryan.castillo@novaflow.com', role: 'Implementation Specialist', department: 'Operations', status: 'Active', customers: 5 },
-  { id: 'tm-009', name: 'Fatima Al-Rashid', initials: 'FA', email: 'fatima.alrashid@novaflow.com', role: 'CS Manager', department: 'Customer Success', status: 'Active', customers: 4 },
-  { id: 'tm-010', name: 'Chris Nakamura', initials: 'CN', email: 'chris.nakamura@novaflow.com', role: 'CS Specialist', department: 'Customer Success', status: 'Active', customers: 4 },
-  { id: 'tm-011', name: 'Demo User', initials: 'DU', email: 'demo@novaflow.com', role: 'Ops Director', department: 'Operations', status: 'Active', customers: 0 },
-];
-
-const roleColors: Record<string, string> = {
-  'Ops Director': 'bg-purple-100 text-purple-700',
-  'Senior CS Manager': 'bg-blue-100 text-blue-700',
-  'CS Manager': 'bg-indigo-100 text-indigo-700',
-  'CS Specialist': 'bg-cyan-100 text-cyan-700',
-  'Implementation Specialist': 'bg-teal-100 text-teal-700',
-};
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import { Bell, Shield, Check, X, Activity, Database, Cpu, Wifi, AlertTriangle, CheckCircle, Clock, RefreshCw, Server, Zap, Mail, Send } from 'lucide-react';
 
 interface NotifPref {
   label: string;
@@ -106,22 +75,18 @@ function SystemHealthWidget() {
     error: { icon: <AlertTriangle size={12} />, color: 'text-red-600', bg: 'bg-red-50 border-red-100' },
   };
 
-  const allOperational = services.every(s => s.status === 'operational');
   const degradedCount = services.filter(s => s.status === 'degraded').length;
   const outageCount = services.filter(s => s.status === 'outage').length;
-
   const overallStatus = outageCount > 0 ? 'outage' : degradedCount > 0 ? 'degraded' : 'operational';
   const overallConfig = statusConfig[overallStatus];
-
   const avgLatency = Math.round(services.reduce((sum, s) => sum + s.latency, 0) / services.length);
   const avgUptime = (services.reduce((sum, s) => sum + s.uptime, 0) / services.length).toFixed(2);
 
   return (
     <div className="space-y-5">
-      {/* Overall Status Banner */}
       <div className={`rounded-xl border p-4 flex items-center justify-between gap-4 ${
         overallStatus === 'operational' ? 'bg-green-50 border-green-200' :
-        overallStatus === 'degraded'? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
+        overallStatus === 'degraded' ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
       }`}>
         <div className="flex items-center gap-3">
           <div className={`w-3 h-3 rounded-full ${overallConfig.dot} animate-pulse`} />
@@ -136,16 +101,11 @@ function SystemHealthWidget() {
             </p>
           </div>
         </div>
-        <button
-          onClick={handleRefresh}
-          className="flex items-center gap-1.5 text-xs font-600 text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg bg-white border border-border"
-        >
+        <button onClick={handleRefresh} className="flex items-center gap-1.5 text-xs font-600 text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg bg-white border border-border">
           <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
           Refresh
         </button>
       </div>
-
-      {/* KPI Row */}
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Services Online', value: `${services.filter(s => s.status === 'operational').length}/${services.length}`, icon: <Server size={15} />, color: 'text-green-600', bg: 'bg-green-50' },
@@ -153,9 +113,7 @@ function SystemHealthWidget() {
           { label: 'Avg Uptime (30d)', value: `${avgUptime}%`, icon: <Cpu size={15} />, color: 'text-primary', bg: 'bg-primary/5' },
         ].map(kpi => (
           <div key={kpi.label} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-lg ${kpi.bg} flex items-center justify-center ${kpi.color} flex-shrink-0`}>
-              {kpi.icon}
-            </div>
+            <div className={`w-9 h-9 rounded-lg ${kpi.bg} flex items-center justify-center ${kpi.color} flex-shrink-0`}>{kpi.icon}</div>
             <div>
               <p className="text-lg font-700 text-foreground leading-tight">{kpi.value}</p>
               <p className="text-xs text-muted-foreground">{kpi.label}</p>
@@ -163,33 +121,20 @@ function SystemHealthWidget() {
           </div>
         ))}
       </div>
-
-      {/* Services Grid */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-border">
-          <h3 className="text-sm font-700 text-foreground">Service Status</h3>
-        </div>
+        <div className="px-5 py-3.5 border-b border-border"><h3 className="text-sm font-700 text-foreground">Service Status</h3></div>
         <div className="divide-y divide-border">
           {services.map(service => {
             const cfg = statusConfig[service.status];
             return (
               <div key={service.name} className="px-5 py-3 flex items-center gap-4">
-                <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground flex-shrink-0">
-                  {service.icon}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-600 text-foreground">{service.name}</p>
-                </div>
+                <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground flex-shrink-0">{service.icon}</div>
+                <div className="flex-1 min-w-0"><p className="text-xs font-600 text-foreground">{service.name}</p></div>
                 <div className="flex items-center gap-4 text-xs tabular-nums">
-                  <span className="text-muted-foreground hidden sm:block">
-                    <span className="font-600 text-foreground">{service.latency}ms</span> latency
-                  </span>
-                  <span className="text-muted-foreground hidden sm:block">
-                    <span className="font-600 text-foreground">{service.uptime}%</span> uptime
-                  </span>
+                  <span className="text-muted-foreground hidden sm:block"><span className="font-600 text-foreground">{service.latency}ms</span> latency</span>
+                  <span className="text-muted-foreground hidden sm:block"><span className="font-600 text-foreground">{service.uptime}%</span> uptime</span>
                   <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-600 ${cfg.bg} ${cfg.color}`}>
-                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
-                    {cfg.label}
+                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />{cfg.label}
                   </span>
                 </div>
               </div>
@@ -197,12 +142,8 @@ function SystemHealthWidget() {
           })}
         </div>
       </div>
-
-      {/* Recent System Events */}
       <div className="bg-card border border-border rounded-xl overflow-hidden">
-        <div className="px-5 py-3.5 border-b border-border">
-          <h3 className="text-sm font-700 text-foreground">Recent System Events</h3>
-        </div>
+        <div className="px-5 py-3.5 border-b border-border"><h3 className="text-sm font-700 text-foreground">Recent System Events</h3></div>
         <div className="p-4 space-y-2">
           {events.map(event => {
             const cfg = eventConfig[event.type];
@@ -220,8 +161,89 @@ function SystemHealthWidget() {
   );
 }
 
+function NotificationTestWidget() {
+  const supabase = createClient();
+  const { profile } = useAuth();
+  const [testEmail, setTestEmail] = useState('');
+  const [sending, setSending] = useState(false);
+  const [sent, setSent] = useState(false);
+  const [sendError, setSendError] = useState('');
+
+  useEffect(() => {
+    if (profile?.email) setTestEmail(profile.email);
+  }, [profile]);
+
+  const sendTest = async () => {
+    setSending(true);
+    setSendError('');
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const res = await fetch(`${process.env.NEXT_PUBLIC_SUPABASE_URL}/functions/v1/send-notification`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${session?.access_token}`,
+        },
+        body: JSON.stringify({
+          type: 'risk_alert',
+          to: testEmail,
+          data: {
+            customerName: 'Vantage Capital Partners',
+            tier: 'Enterprise',
+            region: 'North America',
+            issue: 'Compliance approval pending 18 days. Go Live at risk.',
+            severity: 'Critical',
+            daysSinceLastActivity: 18,
+            revenueAtRisk: 180000,
+            manager: 'Sarah Chen',
+          },
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.error || 'Failed to send');
+      setSent(true);
+      setTimeout(() => setSent(false), 4000);
+    } catch (err: any) {
+      setSendError(err.message);
+    } finally {
+      setSending(false);
+    }
+  };
+
+  return (
+    <div className="bg-card border border-border rounded-xl p-5 space-y-4">
+      <div className="flex items-center gap-2">
+        <Mail size={14} className="text-primary" />
+        <h3 className="text-sm font-700 text-foreground">Email Notification Test</h3>
+      </div>
+      <p className="text-xs text-muted-foreground">Send a test risk alert email via the Resend integration to verify the notification pipeline.</p>
+      <div className="flex gap-2">
+        <input
+          type="email"
+          value={testEmail}
+          onChange={e => setTestEmail(e.target.value)}
+          placeholder="recipient@email.com"
+          className="flex-1 px-3 py-2 text-xs rounded-lg border border-border bg-background outline-none focus:ring-2 focus:ring-primary/30"
+        />
+        <button
+          onClick={sendTest}
+          disabled={sending || !testEmail}
+          className={`flex items-center gap-1.5 px-4 py-2 text-xs font-600 rounded-lg transition-all ${
+            sent ? 'bg-green-100 text-green-700 border border-green-200' : 'bg-primary text-primary-foreground hover:opacity-90 disabled:opacity-50'
+          }`}
+        >
+          {sending ? <div className="w-3 h-3 border-2 border-current border-t-transparent rounded-full animate-spin" /> :
+           sent ? <CheckCircle size={12} /> : <Send size={12} />}
+          {sending ? 'Sending…' : sent ? 'Sent!' : 'Send Test'}
+        </button>
+      </div>
+      {sendError && <p className="text-xs text-red-600">{sendError}</p>}
+    </div>
+  );
+}
+
 export default function AdministrationPage() {
-  const [activeTab, setActiveTab] = useState<'team' | 'notifications' | 'roles' | 'health'>('team');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'roles' | 'health' | 'email'>('notifications');
   const [prefs, setPrefs] = useState<NotifPref[]>([
     { label: 'Risk Alert Notifications', description: 'Receive alerts when customers are flagged as high or critical risk', enabled: true },
     { label: 'Milestone Completion Alerts', description: 'Get notified when customers complete key onboarding milestones', enabled: true },
@@ -229,19 +251,21 @@ export default function AdministrationPage() {
     { label: 'Task Escalation Alerts', description: 'Notifications when tasks are escalated or overdue by 3+ days', enabled: false },
     { label: 'Go Live Reminders', description: 'Reminders 7 days and 1 day before scheduled Go Live dates', enabled: true },
     { label: 'Health Score Drops', description: 'Alert when a customer health score drops by 10+ points in a week', enabled: false },
+    { label: 'SLA Breach Alerts', description: 'Immediate notification when a customer SLA is breached', enabled: true },
+    { label: 'Audit Log Digest', description: 'Daily digest of all admin actions and system events', enabled: false },
   ]);
 
   const togglePref = (i: number) => setPrefs(prev => prev.map((p, idx) => idx === i ? { ...p, enabled: !p.enabled } : p));
 
   return (
-    <AppLayout title="Administration" subtitle="Team management, roles, notification preferences, and system health">
+    <AppLayout title="Administration" subtitle="Notification preferences, role assignments, system health, and email configuration">
       <div className="space-y-6">
         {/* Tabs */}
         <div className="flex gap-2 border-b border-border pb-4 flex-wrap">
           {([
-            { id: 'team', label: 'Team Members', icon: <Users size={14} /> },
-            { id: 'roles', label: 'Role Assignments', icon: <Shield size={14} /> },
             { id: 'notifications', label: 'Notification Preferences', icon: <Bell size={14} /> },
+            { id: 'roles', label: 'Role Assignments', icon: <Shield size={14} /> },
+            { id: 'email', label: 'Email Notifications', icon: <Mail size={14} /> },
             { id: 'health', label: 'System Health', icon: <Activity size={14} /> },
           ] as const).map(tab => (
             <button
@@ -256,47 +280,26 @@ export default function AdministrationPage() {
           ))}
         </div>
 
-        {/* Team Members */}
-        {activeTab === 'team' && (
-          <div className="bg-card border border-border rounded-xl overflow-hidden">
-            <div className="px-5 py-4 border-b border-border flex items-center justify-between">
-              <div>
-                <h3 className="text-sm font-700 text-foreground">Team Members</h3>
-                <p className="text-xs text-muted-foreground mt-0.5">{teamMembers.length} members · NovaFlow Technologies</p>
+        {/* Notification Preferences */}
+        {activeTab === 'notifications' && (
+          <div className="space-y-3 max-w-2xl">
+            <p className="text-xs text-muted-foreground">Configure in-app notification preferences for your account</p>
+            {prefs.map((pref, i) => (
+              <div key={pref.label} className="bg-card border border-border rounded-xl p-4 flex items-center justify-between gap-4">
+                <div className="flex-1">
+                  <p className="text-xs font-700 text-foreground">{pref.label}</p>
+                  <p className="text-xs text-muted-foreground mt-0.5">{pref.description}</p>
+                </div>
+                <button
+                  onClick={() => togglePref(i)}
+                  className={`w-10 h-5 rounded-full transition-all duration-200 flex items-center px-0.5 flex-shrink-0 ${pref.enabled ? 'bg-primary justify-end' : 'bg-muted justify-start'}`}
+                >
+                  <span className="w-4 h-4 bg-white rounded-full shadow-sm flex items-center justify-center">
+                    {pref.enabled ? <Check size={9} className="text-primary" /> : <X size={9} className="text-muted-foreground" />}
+                  </span>
+                </button>
               </div>
-            </div>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr className="border-b border-border bg-muted/40">
-                    {['Member', 'Email', 'Role', 'Department', 'Customers', 'Status'].map(h => (
-                      <th key={h} className="text-left text-xs font-600 text-muted-foreground uppercase tracking-wider px-5 py-3 whitespace-nowrap">{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {teamMembers.map((member, i) => (
-                    <tr key={member.id} className={`border-b border-border last:border-0 hover:bg-muted/40 ${i % 2 === 0 ? '' : 'bg-muted/20'}`}>
-                      <td className="px-5 py-3">
-                        <div className="flex items-center gap-2.5">
-                          <div className="w-7 h-7 rounded-full bg-primary/10 text-primary text-xs font-700 flex items-center justify-center flex-shrink-0">{member.initials}</div>
-                          <span className="text-xs font-600 text-foreground">{member.name}</span>
-                        </div>
-                      </td>
-                      <td className="px-5 py-3 text-xs text-muted-foreground">{member.email}</td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs font-600 px-2 py-0.5 rounded-md ${roleColors[member.role] || 'bg-gray-100 text-gray-600'}`}>{member.role}</span>
-                      </td>
-                      <td className="px-5 py-3 text-xs text-muted-foreground">{member.department}</td>
-                      <td className="px-5 py-3 text-xs font-600 tabular-nums text-foreground">{member.customers > 0 ? member.customers : '—'}</td>
-                      <td className="px-5 py-3">
-                        <span className={`text-xs font-600 px-2 py-0.5 rounded-md ${member.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{member.status}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
+            ))}
           </div>
         )}
 
@@ -304,18 +307,19 @@ export default function AdministrationPage() {
         {activeTab === 'roles' && (
           <div className="space-y-4">
             {[
-              { role: 'Ops Director', permissions: ['Full dashboard access', 'Risk alert management', 'Team administration', 'Report generation', 'AI insights access'], members: ['Demo User'] },
-              { role: 'Senior CS Manager', permissions: ['Customer management', 'Task management', 'Milestone tracking', 'Risk flag creation', 'Report viewing'], members: ['Sarah Chen', 'Daniel Osei'] },
-              { role: 'CS Manager', permissions: ['Customer management', 'Task management', 'Milestone tracking', 'Report viewing'], members: ['Marcus Webb', 'Aiko Tanaka', 'Fatima Al-Rashid'] },
-              { role: 'CS Specialist', permissions: ['Customer viewing', 'Task updates', 'Timeline viewing'], members: ['Priya Nair', 'Lena Müller', 'Chris Nakamura'] },
-              { role: 'Implementation Specialist', permissions: ['Task management', 'Milestone updates', 'Customer timeline access'], members: ['Jordan Ellis', 'Ryan Castillo'] },
+              { role: 'Admin', color: 'bg-red-100 text-red-700', permissions: ['Full system access', 'User management', 'Audit log access', 'SLA configuration', 'Team invitations', 'All reports'], members: ['admin@cois.app'] },
+              { role: 'CEO', color: 'bg-purple-100 text-purple-700', permissions: ['Executive dashboard', 'All reports', 'Analytics', 'Risk overview', 'AI insights'], members: ['ceo@cois.app'] },
+              { role: 'Operations Director', color: 'bg-violet-100 text-violet-700', permissions: ['Full dashboard access', 'Risk alert management', 'Team administration', 'Report generation', 'AI insights access', 'SLA tracker'], members: ['ops@cois.app'] },
+              { role: 'CS Manager', color: 'bg-blue-100 text-blue-700', permissions: ['Customer management', 'Task management', 'Milestone tracking', 'Risk flag creation', 'Report viewing'], members: ['csmanager@cois.app'] },
+              { role: 'CS Specialist', color: 'bg-cyan-100 text-cyan-700', permissions: ['Customer viewing', 'Task updates', 'Timeline viewing', 'AI assistant'], members: ['specialist@cois.app'] },
+              { role: 'Support Agent', color: 'bg-slate-100 text-slate-700', permissions: ['Customer viewing', 'Task updates', 'Notifications'], members: ['agent@cois.app'] },
             ].map(r => (
               <div key={r.role} className="bg-card border border-border rounded-xl p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div className="flex-1">
                     <div className="flex items-center gap-2 mb-2">
                       <Shield size={14} className="text-primary" />
-                      <span className={`text-xs font-700 px-2 py-0.5 rounded-md ${roleColors[r.role] || 'bg-gray-100 text-gray-600'}`}>{r.role}</span>
+                      <span className={`text-xs font-700 px-2 py-0.5 rounded-md ${r.color}`}>{r.role}</span>
                     </div>
                     <div className="flex flex-wrap gap-1.5 mb-3">
                       {r.permissions.map(p => (
@@ -335,26 +339,34 @@ export default function AdministrationPage() {
           </div>
         )}
 
-        {/* Notification Preferences */}
-        {activeTab === 'notifications' && (
-          <div className="space-y-3 max-w-2xl">
-            <p className="text-xs text-muted-foreground">Configure notification preferences for Demo User · Ops Director</p>
-            {prefs.map((pref, i) => (
-              <div key={pref.label} className="bg-card border border-border rounded-xl p-4 flex items-center justify-between gap-4">
-                <div className="flex-1">
-                  <p className="text-xs font-700 text-foreground">{pref.label}</p>
-                  <p className="text-xs text-muted-foreground mt-0.5">{pref.description}</p>
+        {/* Email Notifications */}
+        {activeTab === 'email' && (
+          <div className="space-y-4 max-w-2xl">
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <p className="text-xs font-700 text-blue-800 mb-1">Email Notifications via Resend</p>
+              <p className="text-xs text-blue-700 leading-relaxed">
+                COIS uses Resend to send transactional emails for risk alerts, SLA breaches, team invitations, and password resets.
+                Configure your Resend API key in the edge function to enable real email delivery.
+              </p>
+            </div>
+            <NotificationTestWidget />
+            <div className="bg-card border border-border rounded-xl p-5 space-y-3">
+              <h3 className="text-sm font-700 text-foreground">Email Triggers</h3>
+              {[
+                { trigger: 'Risk Alert', description: 'Sent when a customer is flagged Critical or High risk', status: 'Active' },
+                { trigger: 'SLA Breach', description: 'Sent when a customer exceeds their SLA threshold', status: 'Active' },
+                { trigger: 'Team Invitation', description: 'Sent when a new team member is invited', status: 'Active' },
+                { trigger: 'Password Reset', description: 'Sent when a user requests a password reset', status: 'Active' },
+              ].map(t => (
+                <div key={t.trigger} className="flex items-center justify-between py-2.5 border-b border-border last:border-0">
+                  <div>
+                    <p className="text-xs font-700 text-foreground">{t.trigger}</p>
+                    <p className="text-xs text-muted-foreground mt-0.5">{t.description}</p>
+                  </div>
+                  <span className="text-xs font-600 px-2 py-0.5 rounded-md bg-green-100 text-green-700">{t.status}</span>
                 </div>
-                <button
-                  onClick={() => togglePref(i)}
-                  className={`w-10 h-5 rounded-full transition-all duration-200 flex items-center px-0.5 flex-shrink-0 ${pref.enabled ? 'bg-primary justify-end' : 'bg-muted justify-start'}`}
-                >
-                  <span className="w-4 h-4 bg-white rounded-full shadow-sm flex items-center justify-center">
-                    {pref.enabled ? <Check size={9} className="text-primary" /> : <X size={9} className="text-muted-foreground" />}
-                  </span>
-                </button>
-              </div>
-            ))}
+              ))}
+            </div>
           </div>
         )}
 

@@ -48,6 +48,9 @@ export const ROLE_ACCESS: Record<string, UserRole[]> = {
   '/ai-assistant': ['admin', 'ceo', 'operations_director', 'cs_manager', 'cs_specialist'],
   '/notifications': ['admin', 'ceo', 'operations_director', 'cs_manager', 'cs_specialist', 'support_agent'],
   '/administration': ['admin', 'ceo', 'operations_director'],
+  '/audit-log': ['admin', 'ceo', 'operations_director'],
+  '/sla-tracker': ['admin', 'ceo', 'operations_director', 'cs_manager'],
+  '/team-management': ['admin', 'operations_director'],
 };
 
 interface AuthContextType {
