@@ -33,7 +33,7 @@ export const metadata: Metadata = {
     siteName: 'COIS Portfolio Project',
     images: [
     {
-      url: "https://img.rocket.new/generatedImages/rocket_gen_img_117049a49-1770819374346.png",
+      url: "https://img.rocket.new/generatedImages/rocket_gen_img_15b300c03-1764660631226.png",
       width: 1200,
       height: 630,
       alt: 'COIS — Customer Onboarding Intelligence System dashboard preview'

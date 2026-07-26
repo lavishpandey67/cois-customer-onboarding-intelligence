@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Users, Bell, Shield, Check, X } from 'lucide-react';
+import { Users, Bell, Shield, Check, X, Activity, Database, Cpu, Wifi, AlertTriangle, CheckCircle, Clock, RefreshCw, Server, Zap } from 'lucide-react';
 
 interface TeamMember {
   id: string;
@@ -43,8 +43,185 @@ interface NotifPref {
   enabled: boolean;
 }
 
+interface ServiceStatus {
+  name: string;
+  status: 'operational' | 'degraded' | 'outage';
+  latency: number;
+  uptime: number;
+  icon: React.ReactNode;
+}
+
+interface SystemEvent {
+  id: string;
+  type: 'info' | 'warning' | 'success' | 'error';
+  message: string;
+  time: string;
+}
+
+function SystemHealthWidget() {
+  const [lastRefreshed, setLastRefreshed] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const now = new Date();
+    setLastRefreshed(now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  }, [tick]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+      setTick(t => t + 1);
+    }, 900);
+  };
+
+  const services: ServiceStatus[] = [
+    { name: 'Supabase Database', status: 'operational', latency: 42, uptime: 99.97, icon: <Database size={14} /> },
+    { name: 'Authentication Service', status: 'operational', latency: 31, uptime: 99.99, icon: <Shield size={14} /> },
+    { name: 'API Gateway', status: 'operational', latency: 58, uptime: 99.94, icon: <Wifi size={14} /> },
+    { name: 'AI Assistant Engine', status: 'degraded', latency: 312, uptime: 98.21, icon: <Zap size={14} /> },
+    { name: 'Analytics Pipeline', status: 'operational', latency: 74, uptime: 99.88, icon: <Activity size={14} /> },
+    { name: 'Notification Service', status: 'operational', latency: 29, uptime: 99.95, icon: <Bell size={14} /> },
+  ];
+
+  const events: SystemEvent[] = [
+    { id: 'ev-1', type: 'warning', message: 'AI Assistant Engine response time elevated (>300ms)', time: '14 min ago' },
+    { id: 'ev-2', type: 'success', message: 'Supabase real-time subscriptions reconnected successfully', time: '1 hr ago' },
+    { id: 'ev-3', type: 'info', message: 'Scheduled database vacuum completed — 3 tables optimised', time: '3 hr ago' },
+    { id: 'ev-4', type: 'success', message: 'All services passed health check (automated)', time: '6 hr ago' },
+    { id: 'ev-5', type: 'info', message: 'Analytics pipeline batch job completed — 15 customers synced', time: '9 hr ago' },
+  ];
+
+  const statusConfig = {
+    operational: { label: 'Operational', color: 'text-green-600', bg: 'bg-green-100', dot: 'bg-green-500' },
+    degraded: { label: 'Degraded', color: 'text-amber-600', bg: 'bg-amber-100', dot: 'bg-amber-500' },
+    outage: { label: 'Outage', color: 'text-red-600', bg: 'bg-red-100', dot: 'bg-red-500' },
+  };
+
+  const eventConfig = {
+    info: { icon: <Clock size={12} />, color: 'text-blue-600', bg: 'bg-blue-50 border-blue-100' },
+    warning: { icon: <AlertTriangle size={12} />, color: 'text-amber-600', bg: 'bg-amber-50 border-amber-100' },
+    success: { icon: <CheckCircle size={12} />, color: 'text-green-600', bg: 'bg-green-50 border-green-100' },
+    error: { icon: <AlertTriangle size={12} />, color: 'text-red-600', bg: 'bg-red-50 border-red-100' },
+  };
+
+  const allOperational = services.every(s => s.status === 'operational');
+  const degradedCount = services.filter(s => s.status === 'degraded').length;
+  const outageCount = services.filter(s => s.status === 'outage').length;
+
+  const overallStatus = outageCount > 0 ? 'outage' : degradedCount > 0 ? 'degraded' : 'operational';
+  const overallConfig = statusConfig[overallStatus];
+
+  const avgLatency = Math.round(services.reduce((sum, s) => sum + s.latency, 0) / services.length);
+  const avgUptime = (services.reduce((sum, s) => sum + s.uptime, 0) / services.length).toFixed(2);
+
+  return (
+    <div className="space-y-5">
+      {/* Overall Status Banner */}
+      <div className={`rounded-xl border p-4 flex items-center justify-between gap-4 ${
+        overallStatus === 'operational' ? 'bg-green-50 border-green-200' :
+        overallStatus === 'degraded'? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'
+      }`}>
+        <div className="flex items-center gap-3">
+          <div className={`w-3 h-3 rounded-full ${overallConfig.dot} animate-pulse`} />
+          <div>
+            <p className={`text-sm font-700 ${overallConfig.color}`}>
+              {overallStatus === 'operational' ? 'All Systems Operational' :
+               overallStatus === 'degraded' ? `${degradedCount} Service${degradedCount > 1 ? 's' : ''} Degraded` :
+               `${outageCount} Service${outageCount > 1 ? 's' : ''} Down`}
+            </p>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              {lastRefreshed ? `Last checked at ${lastRefreshed}` : 'Checking…'}
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={handleRefresh}
+          className="flex items-center gap-1.5 text-xs font-600 text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg bg-white border border-border"
+        >
+          <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+          Refresh
+        </button>
+      </div>
+
+      {/* KPI Row */}
+      <div className="grid grid-cols-3 gap-4">
+        {[
+          { label: 'Services Online', value: `${services.filter(s => s.status === 'operational').length}/${services.length}`, icon: <Server size={15} />, color: 'text-green-600', bg: 'bg-green-50' },
+          { label: 'Avg API Latency', value: `${avgLatency}ms`, icon: <Activity size={15} />, color: 'text-blue-600', bg: 'bg-blue-50' },
+          { label: 'Avg Uptime (30d)', value: `${avgUptime}%`, icon: <Cpu size={15} />, color: 'text-primary', bg: 'bg-primary/5' },
+        ].map(kpi => (
+          <div key={kpi.label} className="bg-card border border-border rounded-xl p-4 flex items-center gap-3">
+            <div className={`w-9 h-9 rounded-lg ${kpi.bg} flex items-center justify-center ${kpi.color} flex-shrink-0`}>
+              {kpi.icon}
+            </div>
+            <div>
+              <p className="text-lg font-700 text-foreground leading-tight">{kpi.value}</p>
+              <p className="text-xs text-muted-foreground">{kpi.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Services Grid */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-border">
+          <h3 className="text-sm font-700 text-foreground">Service Status</h3>
+        </div>
+        <div className="divide-y divide-border">
+          {services.map(service => {
+            const cfg = statusConfig[service.status];
+            return (
+              <div key={service.name} className="px-5 py-3 flex items-center gap-4">
+                <div className="w-7 h-7 rounded-lg bg-muted flex items-center justify-center text-muted-foreground flex-shrink-0">
+                  {service.icon}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-xs font-600 text-foreground">{service.name}</p>
+                </div>
+                <div className="flex items-center gap-4 text-xs tabular-nums">
+                  <span className="text-muted-foreground hidden sm:block">
+                    <span className="font-600 text-foreground">{service.latency}ms</span> latency
+                  </span>
+                  <span className="text-muted-foreground hidden sm:block">
+                    <span className="font-600 text-foreground">{service.uptime}%</span> uptime
+                  </span>
+                  <span className={`flex items-center gap-1.5 px-2 py-0.5 rounded-md text-xs font-600 ${cfg.bg} ${cfg.color}`}>
+                    <span className={`w-1.5 h-1.5 rounded-full ${cfg.dot}`} />
+                    {cfg.label}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Recent System Events */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-border">
+          <h3 className="text-sm font-700 text-foreground">Recent System Events</h3>
+        </div>
+        <div className="p-4 space-y-2">
+          {events.map(event => {
+            const cfg = eventConfig[event.type];
+            return (
+              <div key={event.id} className={`flex items-start gap-3 p-3 rounded-lg border ${cfg.bg}`}>
+                <span className={`mt-0.5 flex-shrink-0 ${cfg.color}`}>{cfg.icon}</span>
+                <p className="text-xs text-foreground flex-1">{event.message}</p>
+                <span className="text-xs text-muted-foreground flex-shrink-0 whitespace-nowrap">{event.time}</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function AdministrationPage() {
-  const [activeTab, setActiveTab] = useState<'team' | 'notifications' | 'roles'>('team');
+  const [activeTab, setActiveTab] = useState<'team' | 'notifications' | 'roles' | 'health'>('team');
   const [prefs, setPrefs] = useState<NotifPref[]>([
     { label: 'Risk Alert Notifications', description: 'Receive alerts when customers are flagged as high or critical risk', enabled: true },
     { label: 'Milestone Completion Alerts', description: 'Get notified when customers complete key onboarding milestones', enabled: true },
@@ -57,14 +234,15 @@ export default function AdministrationPage() {
   const togglePref = (i: number) => setPrefs(prev => prev.map((p, idx) => idx === i ? { ...p, enabled: !p.enabled } : p));
 
   return (
-    <AppLayout title="Administration" subtitle="Team management, roles, and notification preferences">
+    <AppLayout title="Administration" subtitle="Team management, roles, notification preferences, and system health">
       <div className="space-y-6">
         {/* Tabs */}
-        <div className="flex gap-2 border-b border-border pb-4">
+        <div className="flex gap-2 border-b border-border pb-4 flex-wrap">
           {([
             { id: 'team', label: 'Team Members', icon: <Users size={14} /> },
             { id: 'roles', label: 'Role Assignments', icon: <Shield size={14} /> },
             { id: 'notifications', label: 'Notification Preferences', icon: <Bell size={14} /> },
+            { id: 'health', label: 'System Health', icon: <Activity size={14} /> },
           ] as const).map(tab => (
             <button
               key={tab.id}
@@ -179,6 +357,9 @@ export default function AdministrationPage() {
             ))}
           </div>
         )}
+
+        {/* System Health */}
+        {activeTab === 'health' && <SystemHealthWidget />}
       </div>
     </AppLayout>
   );
