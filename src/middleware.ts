@@ -14,7 +14,7 @@ function injectTokenFromHeader(request: NextRequest): void {
   request.cookies.set(`sb-${getProjectRef()}-auth-token`, token);
 }
 
-const PUBLIC_PATHS = ['/login', '/auth/callback', '/auth/auth-code-error'];
+const PUBLIC_PATHS = ['/login', '/auth/callback', '/auth/auth-code-error', '/landing'];
 
 export async function middleware(request: NextRequest) {
   injectTokenFromHeader(request);
@@ -55,7 +55,7 @@ export async function middleware(request: NextRequest) {
   // Redirect authenticated users away from login
   if (user && pathname === '/login') {
     const url = request.nextUrl.clone();
-    url.pathname = '/';
+    url.pathname = '/dashboard';
     return NextResponse.redirect(url);
   }
 

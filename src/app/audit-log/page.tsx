@@ -3,7 +3,12 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { createClient } from '@/lib/supabase/client';
-import { Shield, Search, Filter, RefreshCw, LogIn, LogOut, Eye, Plus, Edit2, Trash2, FileText, AlertTriangle, UserPlus, Key, ChevronDown } from 'lucide-react';
+import {
+  Shield, Search, Filter, RefreshCw, LogIn, LogOut, Eye, Plus, Edit2,
+  Trash2, FileText, AlertTriangle, UserPlus, Key, ChevronDown,
+  Rocket, RotateCcw, GitBranch, Server, Zap,
+} from 'lucide-react';
+import { useDemoSimulator, DemoSimulatorPanel, SimulatedEvent } from '@/components/DemoEventSimulator';
 
 interface AuditLog {
   id: string;
@@ -16,6 +21,7 @@ interface AuditLog {
   details: Record<string, any>;
   ipAddress: string;
   createdAt: string;
+  isDevOps?: boolean;
 }
 
 const ACTION_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: string; label: string }> = {
@@ -30,7 +36,70 @@ const ACTION_CONFIG: Record<string, { icon: React.ReactNode; color: string; bg: 
   invite:         { icon: <UserPlus size={12} />,    color: 'text-indigo-700', bg: 'bg-indigo-100', label: 'Invite' },
   role_change:    { icon: <Shield size={12} />,      color: 'text-violet-700', bg: 'bg-violet-100', label: 'Role Change' },
   password_reset: { icon: <Key size={12} />,         color: 'text-rose-700',   bg: 'bg-rose-100',   label: 'Password Reset' },
+  deploy:         { icon: <Rocket size={12} />,      color: 'text-violet-700', bg: 'bg-violet-100', label: 'Deploy' },
+  rollback:       { icon: <RotateCcw size={12} />,   color: 'text-red-700',    bg: 'bg-red-100',    label: 'Rollback' },
+  pipeline_run:   { icon: <GitBranch size={12} />,   color: 'text-blue-700',   bg: 'bg-blue-100',   label: 'Pipeline Run' },
+  infra_change:   { icon: <Server size={12} />,      color: 'text-amber-700',  bg: 'bg-amber-100',  label: 'Infra Change' },
+  build_failed:   { icon: <Zap size={12} />,         color: 'text-red-700',    bg: 'bg-red-100',    label: 'Build Failed' },
+  infra_alert:    { icon: <Server size={12} />,      color: 'text-amber-700',  bg: 'bg-amber-100',  label: 'Infra Alert' },
 };
+
+const DEVOPS_ACTIONS = ['deploy', 'rollback', 'pipeline_run', 'infra_change', 'build_failed', 'infra_alert'];
+
+const SIMULATED_DEVOPS_EVENTS: AuditLog[] = [
+  {
+    id: 'devops-001', userId: null, userEmail: 'ci-cd@pipeline.internal', userRole: 'system',
+    action: 'deploy', resource: 'production', resourceId: 'pl-247',
+    details: { run: '#247', commit: 'a3f9c12', branch: 'main', environment: 'Production', provider: 'AWS us-east-1', duration: '4m 12s', status: 'in_progress' },
+    ipAddress: '10.0.1.50', createdAt: new Date(Date.now() - 4 * 60000).toISOString(), isDevOps: true,
+  },
+  {
+    id: 'devops-002', userId: null, userEmail: 'ci-cd@pipeline.internal', userRole: 'system',
+    action: 'pipeline_run', resource: 'staging', resourceId: 'pl-246',
+    details: { run: '#246', commit: 'b7e2d45', branch: 'feature/ai-chat-history', environment: 'Staging', provider: 'Azure westeurope', result: 'success', duration: '7m 38s' },
+    ipAddress: '10.0.1.50', createdAt: new Date(Date.now() - 2 * 3600000).toISOString(), isDevOps: true,
+  },
+  {
+    id: 'devops-003', userId: null, userEmail: 'ci-cd@pipeline.internal', userRole: 'system',
+    action: 'build_failed', resource: 'staging', resourceId: 'pl-245',
+    details: { run: '#245', commit: 'c1a8f33', branch: 'fix/sla-seed-ids', stage: 'Unit Tests', error: '3 tests failed — SLA customer_id mismatch', duration: '3m 11s' },
+    ipAddress: '10.0.1.50', createdAt: new Date(Date.now() - 5 * 3600000).toISOString(), isDevOps: true,
+  },
+  {
+    id: 'devops-004', userId: null, userEmail: 'ci-cd@pipeline.internal', userRole: 'system',
+    action: 'deploy', resource: 'production', resourceId: 'pl-244',
+    details: { run: '#244', commit: 'd4b1e90', branch: 'main', environment: 'Production', provider: 'AWS us-east-1', duration: '8m 02s', status: 'success', version: 'v2.4.7' },
+    ipAddress: '10.0.1.50', createdAt: new Date(Date.now() - 24 * 3600000).toISOString(), isDevOps: true,
+  },
+  {
+    id: 'devops-005', userId: null, userEmail: 'infra-bot@cois.internal', userRole: 'system',
+    action: 'infra_change', resource: 'staging', resourceId: 'redis-staging',
+    details: { service: 'Redis Cache', environment: 'Staging', change: 'Memory limit increased from 512MB to 1GB', provider: 'Azure westeurope', reason: 'Cache latency spike INC-041' },
+    ipAddress: '10.0.2.11', createdAt: new Date(Date.now() - 1.5 * 3600000).toISOString(), isDevOps: true,
+  },
+  {
+    id: 'devops-006', userId: null, userEmail: 'ci-cd@pipeline.internal', userRole: 'system',
+    action: 'rollback', resource: 'staging', resourceId: 'pl-243',
+    details: { run: '#243', environment: 'Staging', rolledBackTo: 'v2.4.6', reason: 'Health check failures after deploy', duration: '1m 22s' },
+    ipAddress: '10.0.1.50', createdAt: new Date(Date.now() - 3 * 24 * 3600000).toISOString(), isDevOps: true,
+  },
+];
+
+function simEventToAuditLog(e: SimulatedEvent): AuditLog {
+  return {
+    id: e.id,
+    userId: null,
+    userEmail: e.type === 'infra_alert' ? 'infra-bot@cois.internal' : 'ci-cd@pipeline.internal',
+    userRole: 'system',
+    action: e.type === 'infra_alert' ? 'infra_change' : e.type,
+    resource: e.environment.toLowerCase(),
+    resourceId: null,
+    details: { title: e.title, detail: e.detail, environment: e.environment, simulated: true },
+    ipAddress: '10.0.1.50',
+    createdAt: e.timestamp,
+    isDevOps: true,
+  };
+}
 
 function rowToLog(row: any): AuditLog {
   return {
@@ -44,6 +113,7 @@ function rowToLog(row: any): AuditLog {
     details: row.details || {},
     ipAddress: row.ip_address,
     createdAt: row.created_at,
+    isDevOps: false,
   };
 }
 
@@ -72,8 +142,11 @@ export default function AuditLogPage() {
   const [search, setSearch] = useState('');
   const [actionFilter, setActionFilter] = useState('all');
   const [resourceFilter, setResourceFilter] = useState('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'devops' | 'app'>('all');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [lastRefreshed, setLastRefreshed] = useState('');
+
+  const { events: simEvents, running: simRunning, start: startSim, stop: stopSim, clear: clearSim } = useDemoSimulator(3500);
 
   const supabase = createClient();
 
@@ -85,11 +158,14 @@ export default function AuditLogPage() {
         .select('*')
         .order('created_at', { ascending: false })
         .limit(200);
-      if (!error && data) {
-        setLogs(data.map(rowToLog));
-      }
+      const dbLogs = (!error && data) ? data.map(rowToLog) : [];
+      const merged = [...dbLogs, ...SIMULATED_DEVOPS_EVENTS].sort(
+        (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+      );
+      setLogs(merged);
     } catch (e) {
       console.error('fetchLogs error:', e);
+      setLogs(SIMULATED_DEVOPS_EVENTS);
     } finally {
       setLoading(false);
       setLastRefreshed(new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
@@ -107,7 +183,19 @@ export default function AuditLogPage() {
     return () => { supabase.removeChannel(channel); };
   }, [fetchLogs]);
 
-  const filtered = logs.filter(l => {
+  // Merge simulator events into the log list
+  const simAuditLogs: AuditLog[] = simEvents.map(simEventToAuditLog);
+  const allLogs = [...simAuditLogs, ...logs].sort(
+    (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+  );
+
+  const tabFiltered = allLogs.filter(l => {
+    if (activeTab === 'devops') return l.isDevOps || DEVOPS_ACTIONS.includes(l.action);
+    if (activeTab === 'app') return !l.isDevOps && !DEVOPS_ACTIONS.includes(l.action);
+    return true;
+  });
+
+  const filtered = tabFiltered.filter(l => {
     const matchSearch = !search ||
       l.userEmail.toLowerCase().includes(search.toLowerCase()) ||
       l.resource.toLowerCase().includes(search.toLowerCase()) ||
@@ -117,18 +205,21 @@ export default function AuditLogPage() {
     return matchSearch && matchAction && matchResource;
   });
 
-  const uniqueActions = Array.from(new Set(logs.map(l => l.action)));
-  const uniqueResources = Array.from(new Set(logs.map(l => l.resource)));
+  const uniqueActions = Array.from(new Set(tabFiltered.map(l => l.action)));
+  const uniqueResources = Array.from(new Set(tabFiltered.map(l => l.resource)));
+
+  const devopsCount = allLogs.filter(l => l.isDevOps || DEVOPS_ACTIONS.includes(l.action)).length;
+  const appCount = allLogs.filter(l => !l.isDevOps && !DEVOPS_ACTIONS.includes(l.action)).length;
 
   const stats = {
-    total: logs.length,
-    today: logs.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).length,
-    logins: logs.filter(l => l.action === 'login').length,
-    exports: logs.filter(l => l.action === 'export').length,
+    total: allLogs.length,
+    today: allLogs.filter(l => new Date(l.createdAt).toDateString() === new Date().toDateString()).length,
+    logins: allLogs.filter(l => l.action === 'login').length,
+    deploys: allLogs.filter(l => l.action === 'deploy').length,
   };
 
   return (
-    <AppLayout title="Audit Log" subtitle="Complete activity trail — every action, every user, every timestamp">
+    <AppLayout title="Audit Log" subtitle="Complete activity trail — application events + DevOps pipeline activity">
       <div className="space-y-5">
         {/* KPI Row */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -136,12 +227,40 @@ export default function AuditLogPage() {
             { label: 'Total Events', value: stats.total, color: 'text-foreground', bg: 'bg-muted' },
             { label: 'Today', value: stats.today, color: 'text-blue-700', bg: 'bg-blue-50' },
             { label: 'Logins', value: stats.logins, color: 'text-green-700', bg: 'bg-green-50' },
-            { label: 'Exports', value: stats.exports, color: 'text-purple-700', bg: 'bg-purple-50' },
+            { label: 'Deploys', value: stats.deploys, color: 'text-violet-700', bg: 'bg-violet-50' },
           ].map(s => (
             <div key={s.label} className={`${s.bg} rounded-xl p-4 border border-border`}>
               <p className={`text-2xl font-800 tabular-nums ${s.color}`}>{s.value}</p>
               <p className="text-xs text-muted-foreground mt-0.5">{s.label}</p>
             </div>
+          ))}
+        </div>
+
+        {/* Demo Simulator Panel */}
+        <DemoSimulatorPanel
+          events={simEvents}
+          running={simRunning}
+          onStart={startSim}
+          onStop={stopSim}
+          onClear={clearSim}
+        />
+
+        {/* Tabs */}
+        <div className="flex items-center gap-1 bg-muted rounded-lg p-1 w-fit">
+          {[
+            { key: 'all',    label: `All (${allLogs.length})` },
+            { key: 'app',    label: `Application (${appCount})` },
+            { key: 'devops', label: `DevOps (${devopsCount})` },
+          ].map(tab => (
+            <button
+              key={tab.key}
+              onClick={() => setActiveTab(tab.key as any)}
+              className={`px-3 py-1.5 rounded-md text-xs font-600 transition-all ${
+                activeTab === tab.key ? 'bg-card text-foreground shadow-sm' : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {tab.label}
+            </button>
           ))}
         </div>
 
@@ -194,15 +313,18 @@ export default function AuditLogPage() {
 
         {/* Log Table */}
         <div className="bg-card border border-border rounded-xl overflow-hidden">
-          <div className="px-5 py-3.5 border-b border-border flex items-center justify-between">
+          <div className="px-4 sm:px-5 py-3.5 border-b border-border flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2">
               <Shield size={14} className="text-primary" />
-              <span className="text-sm font-700 text-foreground">Activity Trail</span>
+              <span className="text-sm font-bold text-foreground">Activity Trail</span>
               <span className="text-xs text-muted-foreground">({filtered.length} events)</span>
+              {activeTab === 'devops' && (
+                <span className="text-xs font-bold px-2 py-0.5 rounded-md bg-violet-100 text-violet-700 border border-violet-200">DevOps Feed</span>
+              )}
             </div>
             <div className="flex items-center gap-1.5">
-              <span className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
-              <span className="text-xs text-muted-foreground">Live</span>
+              <span className={`w-2 h-2 rounded-full ${simRunning ? 'bg-amber-500 animate-pulse' : 'bg-emerald-500 animate-pulse'}`} />
+              <span className="text-xs text-muted-foreground font-medium">{simRunning ? 'Simulating' : 'Live'}</span>
             </div>
           </div>
 
@@ -213,16 +335,16 @@ export default function AuditLogPage() {
           ) : filtered.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-16 text-muted-foreground">
               <Shield size={32} className="mb-3 opacity-30" />
-              <p className="text-sm font-600">No audit events found</p>
+              <p className="text-sm font-semibold">No audit events found</p>
               <p className="text-xs mt-1">Try adjusting your filters</p>
             </div>
           ) : (
             <div className="overflow-x-auto">
-              <table className="w-full text-sm">
+              <table className="w-full text-sm min-w-[640px]">
                 <thead>
                   <tr className="border-b border-border bg-muted/40">
-                    {['Timestamp', 'User', 'Action', 'Resource', 'IP Address', 'Details'].map(h => (
-                      <th key={h} className="text-left text-xs font-600 text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">{h}</th>
+                    {['Timestamp', 'User / System', 'Action', 'Resource', 'IP Address', 'Details'].map(h => (
+                      <th key={h} className="text-left text-xs font-semibold text-muted-foreground uppercase tracking-wider px-4 py-3 whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
                 </thead>
@@ -230,27 +352,30 @@ export default function AuditLogPage() {
                   {filtered.map((log, i) => {
                     const cfg = ACTION_CONFIG[log.action] || { icon: <Eye size={12} />, color: 'text-slate-600', bg: 'bg-slate-100', label: log.action };
                     const isExpanded = expandedId === log.id;
+                    const isDevOpsRow = log.isDevOps || DEVOPS_ACTIONS.includes(log.action);
                     return (
                       <React.Fragment key={log.id}>
                         <tr
-                          className={`border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors ${i % 2 === 0 ? '' : 'bg-muted/10'}`}
+                          className={`border-b border-border last:border-0 hover:bg-muted/30 cursor-pointer transition-colors ${
+                            isDevOpsRow ? 'bg-violet-50/40' : i % 2 === 0 ? '' : 'bg-muted/10'
+                          }`}
                           onClick={() => setExpandedId(isExpanded ? null : log.id)}
                         >
                           <td className="px-4 py-3 whitespace-nowrap">
-                            <p className="text-xs font-600 text-foreground tabular-nums">{formatRelative(log.createdAt)}</p>
+                            <p className="text-xs font-bold text-foreground tabular-nums">{formatRelative(log.createdAt)}</p>
                             <p className="text-xs text-muted-foreground">{formatTime(log.createdAt)}</p>
                           </td>
                           <td className="px-4 py-3">
-                            <p className="text-xs font-600 text-foreground">{log.userEmail}</p>
+                            <p className="text-xs font-semibold text-foreground">{log.userEmail}</p>
                             <p className="text-xs text-muted-foreground capitalize">{log.userRole.replace(/_/g, ' ')}</p>
                           </td>
                           <td className="px-4 py-3">
-                            <span className={`inline-flex items-center gap-1.5 text-xs font-600 px-2 py-0.5 rounded-md ${cfg.bg} ${cfg.color}`}>
+                            <span className={`inline-flex items-center gap-1.5 text-xs font-bold px-2 py-0.5 rounded-md ${cfg.bg} ${cfg.color}`}>
                               {cfg.icon}{cfg.label}
                             </span>
                           </td>
                           <td className="px-4 py-3">
-                            <span className="text-xs font-600 text-foreground capitalize">{log.resource.replace(/_/g, ' ')}</span>
+                            <span className="text-xs font-semibold text-foreground capitalize">{log.resource.replace(/_/g, ' ')}</span>
                             {log.resourceId && <p className="text-xs text-muted-foreground font-mono">{log.resourceId}</p>}
                           </td>
                           <td className="px-4 py-3 text-xs text-muted-foreground font-mono">{log.ipAddress || '—'}</td>
@@ -261,9 +386,9 @@ export default function AuditLogPage() {
                         {isExpanded && (
                           <tr className="border-b border-border bg-muted/20">
                             <td colSpan={6} className="px-4 py-3">
-                              <div className="bg-card border border-border rounded-lg p-3">
-                                <p className="text-xs font-700 text-foreground mb-2">Event Details</p>
-                                <pre className="text-xs text-muted-foreground font-mono whitespace-pre-wrap">
+                              <div className="bg-slate-950 border border-slate-800 rounded-lg p-3">
+                                <p className="text-xs font-bold text-slate-400 mb-2 font-mono">// Event Details</p>
+                                <pre className="text-xs text-emerald-400 font-mono whitespace-pre-wrap leading-relaxed">
                                   {JSON.stringify(log.details, null, 2)}
                                 </pre>
                               </div>

@@ -8,12 +8,12 @@ import AppLogo from '@/components/ui/AppLogo';
 import { Eye, EyeOff, LogIn, AlertCircle, Mail, ArrowLeft, CheckCircle, Key } from 'lucide-react';
 
 const DEMO_ACCOUNTS = [
-  { label: 'Admin', email: 'admin@cois.app', password: 'Admin@2026', role: 'Full system access' },
-  { label: 'CEO', email: 'ceo@cois.app', password: 'Ceo@2026', role: 'Executive dashboard + all reports' },
-  { label: 'Operations Analyst', email: 'ops@cois.app', password: 'Ops@2026', role: 'Operations + analytics' },
-  { label: 'CS Manager', email: 'csmanager@cois.app', password: 'Csm@2026', role: 'Customer success + reports' },
-  { label: 'CS Specialist', email: 'specialist@cois.app', password: 'Css@2026', role: 'Customers + tasks + AI' },
-  { label: 'Support Agent', email: 'agent@cois.app', password: 'Agent@2026', role: 'Customers + tasks only' },
+  { label: 'Admin', email: 'admin@cois.demo', password: 'Admin@123!', role: 'Full system access' },
+  { label: 'CEO', email: 'ceo@cois.demo', password: 'Admin@123!', role: 'Executive dashboard + all reports' },
+  { label: 'Operations Director', email: 'ops@cois.demo', password: 'Admin@123!', role: 'Operations + analytics' },
+  { label: 'CS Manager', email: 'manager@cois.demo', password: 'Admin@123!', role: 'Customer success + reports' },
+  { label: 'CS Specialist', email: 'specialist@cois.demo', password: 'Admin@123!', role: 'Customers + tasks + AI' },
+  { label: 'Support Agent', email: 'support@cois.demo', password: 'Admin@123!', role: 'Customers + tasks only' },
 ];
 
 type View = 'login' | 'forgot' | 'reset_sent';
@@ -35,7 +35,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (!loading && user) {
-      router.replace('/');
+      router.replace('/dashboard');
     }
   }, [user, loading, router]);
 
@@ -45,7 +45,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signIn(email, password);
-      router.replace('/');
+      router.replace('/dashboard');
     } catch (err: any) {
       setError(err?.message || 'Invalid email or password. Please try again.');
     } finally {
@@ -60,7 +60,7 @@ export default function LoginPage() {
     setIsLoading(true);
     try {
       await signIn(demoEmail, demoPassword);
-      router.replace('/');
+      router.replace('/dashboard');
     } catch (err: any) {
       setError(err?.message || 'Demo login failed. Please try again.');
     } finally {

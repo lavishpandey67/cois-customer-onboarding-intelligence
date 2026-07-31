@@ -45,3 +45,17 @@ export function GoogleAnalyticsPageTracker() {
 
   return null;
 }
+
+const GoogleAnalytics: React.FC = () => {
+  React.useEffect(() => {
+    // eslint-disable-next-line no-console
+    console.warn('Placeholder: GoogleAnalytics is not implemented yet.');
+  }, []);
+  return (
+    <div>
+      {/* GoogleAnalytics placeholder */}
+    </div>
+  );
+};
+
+export default GoogleAnalytics;

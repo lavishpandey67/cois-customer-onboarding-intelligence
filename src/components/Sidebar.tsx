@@ -25,6 +25,13 @@ import {
   Shield,
   Clock,
   UserCog,
+  FileText,
+  Rocket,
+  Server,
+  Code2,
+  UserCircle,
+  Activity,
+  Globe,
 } from 'lucide-react';
 
 interface NavItem {
@@ -37,7 +44,8 @@ interface NavItem {
 }
 
 const navItems: NavItem[] = [
-  { id: 'nav-dashboard', label: 'Executive Dashboard', href: '/', icon: <LayoutDashboard size={18} />, group: 'core' },
+  { id: 'nav-landing', label: 'Landing Page', href: '/landing', icon: <Globe size={18} />, group: 'core' },
+  { id: 'nav-dashboard', label: 'Executive Dashboard', href: '/dashboard', icon: <LayoutDashboard size={18} />, group: 'core' },
   { id: 'nav-customers', label: 'Customer Management', href: '/customer-management', icon: <Users size={18} />, badge: 4, group: 'core' },
   { id: 'nav-tasks', label: 'Task Management', href: '/task-management', icon: <CheckSquare size={18} />, badge: 5, group: 'core' },
   { id: 'nav-timeline', label: 'Customer Timeline', href: '/customer-timeline', icon: <GitBranch size={18} />, group: 'core' },
@@ -46,11 +54,17 @@ const navItems: NavItem[] = [
   { id: 'nav-knowledge', label: 'Knowledge Base', href: '/knowledge-base', icon: <BookOpen size={18} />, group: 'insights' },
   { id: 'nav-reports', label: 'Reports', href: '/reports', icon: <BarChart2 size={18} />, group: 'insights' },
   { id: 'nav-analytics', label: 'Analytics', href: '/analytics', icon: <TrendingUp size={18} />, group: 'insights' },
+  { id: 'nav-user-analytics', label: 'User Analytics', href: '/user-analytics', icon: <Activity size={18} />, group: 'insights' },
   { id: 'nav-ai', label: 'AI Assistant', href: '/ai-assistant', icon: <Sparkles size={18} />, group: 'insights' },
+  { id: 'nav-case-study', label: 'Case Study', href: '/case-study', icon: <FileText size={18} />, group: 'insights' },
+  { id: 'nav-portfolio', label: 'Portfolio Showcase', href: '/portfolio-showcase', icon: <Code2 size={18} />, group: 'insights' },
   { id: 'nav-notifications', label: 'Notifications', href: '/notifications', icon: <Bell size={18} />, badge: 8, group: 'system' },
   { id: 'nav-audit', label: 'Audit Log', href: '/audit-log', icon: <Shield size={18} />, group: 'system' },
   { id: 'nav-team', label: 'Team Management', href: '/team-management', icon: <UserCog size={18} />, group: 'system' },
   { id: 'nav-admin', label: 'Administration', href: '/administration', icon: <Settings size={18} />, group: 'system' },
+  { id: 'nav-profile', label: 'User Profile', href: '/user-profile', icon: <UserCircle size={18} />, group: 'system' },
+  { id: 'nav-pipeline', label: 'Deployment Pipeline', href: '/deployment-pipeline', icon: <Rocket size={18} />, group: 'devops' },
+  { id: 'nav-infra', label: 'Infrastructure Status', href: '/infrastructure-status', icon: <Server size={18} />, group: 'devops' },
 ];
 
 interface SidebarProps {
@@ -67,6 +81,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
     { key: 'core', label: 'Operations' },
     { key: 'insights', label: 'Insights' },
     { key: 'system', label: 'System' },
+    { key: 'devops', label: 'DevOps' },
   ];
 
   const handleSignOut = async () => {
@@ -110,7 +125,7 @@ export default function Sidebar({ collapsed, onToggle }: SidebarProps) {
               {collapsed && <div className="border-t border-border mb-2 mx-1" />}
               {groupItems.map((item) => {
                 const accessible = isAccessible(item.href);
-                const isActive = item.href === '/' ? pathname === '/' : pathname.startsWith(item.href) && item.href !== '#';
+                const isActive = item.href === '/dashboard' ? pathname === '/dashboard' || pathname === '/' : pathname.startsWith(item.href) && item.href !== '#';
                 if (!accessible) {
                   return (
                     <div

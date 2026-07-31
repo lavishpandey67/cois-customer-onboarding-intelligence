@@ -4,7 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
 import { createClient } from '@/lib/supabase/client';
 import { useAuth } from '@/contexts/AuthContext';
-import { Bell, Shield, Check, X, Activity, Database, Cpu, Wifi, AlertTriangle, CheckCircle, Clock, RefreshCw, Server, Zap, Mail, Send } from 'lucide-react';
+import { Bell, Shield, Check, X, Activity, Database, Cpu, Wifi, AlertTriangle, CheckCircle, Clock, RefreshCw, Server, Zap, Mail, Send, Cloud, HardDrive, TrendingUp, DollarSign, BarChart2 } from 'lucide-react';
 
 interface NotifPref {
   label: string;
@@ -25,6 +25,231 @@ interface SystemEvent {
   type: 'info' | 'warning' | 'success' | 'error';
   message: string;
   time: string;
+}
+
+interface CloudResource {
+  name: string;
+  icon: React.ReactNode;
+  used: number;
+  budget: number;
+  unit: string;
+  cost: number;
+  budgetCost: number;
+  provider: string;
+  color: string;
+  trend: number;
+}
+
+function CloudCostWidget() {
+  const [lastRefreshed, setLastRefreshed] = useState('');
+  const [refreshing, setRefreshing] = useState(false);
+  const [tick, setTick] = useState(0);
+
+  useEffect(() => {
+    const now = new Date();
+    setLastRefreshed(now.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
+  }, [tick]);
+
+  const handleRefresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+      setTick(t => t + 1);
+    }, 900);
+  };
+
+  const resources: CloudResource[] = [
+    {
+      name: 'Compute (EC2 / vCPU)',
+      icon: <Cpu size={15} />,
+      used: 68, budget: 100, unit: 'vCPU-hrs',
+      cost: 142.80, budgetCost: 210.00,
+      provider: 'AWS us-east-1',
+      color: 'bg-blue-500',
+      trend: 12,
+    },
+    {
+      name: 'Object Storage (S3)',
+      icon: <HardDrive size={15} />,
+      used: 234, budget: 500, unit: 'GB',
+      cost: 5.40, budgetCost: 11.50,
+      provider: 'AWS us-east-1',
+      color: 'bg-emerald-500',
+      trend: -3,
+    },
+    {
+      name: 'Database (RDS / Supabase)',
+      icon: <Database size={15} />,
+      used: 18.4, budget: 25, unit: 'GB',
+      cost: 89.20, budgetCost: 121.00,
+      provider: 'Supabase (AWS)',
+      color: 'bg-violet-500',
+      trend: 8,
+    },
+    {
+      name: 'CDN Bandwidth',
+      icon: <Wifi size={15} />,
+      used: 1.2, budget: 5, unit: 'TB',
+      cost: 12.00, budgetCost: 50.00,
+      provider: 'Azure CDN',
+      color: 'bg-amber-500',
+      trend: 5,
+    },
+    {
+      name: 'Container Registry',
+      icon: <Cloud size={15} />,
+      used: 8.7, budget: 20, unit: 'GB',
+      cost: 2.18, budgetCost: 5.00,
+      provider: 'Azure westeurope',
+      color: 'bg-cyan-500',
+      trend: 2,
+    },
+    {
+      name: 'Serverless Functions',
+      icon: <Zap size={15} />,
+      used: 4200000, budget: 10000000, unit: 'invocations',
+      cost: 0.84, budgetCost: 2.00,
+      provider: 'Supabase Edge',
+      color: 'bg-rose-500',
+      trend: 22,
+    },
+  ];
+
+  const totalCost = resources.reduce((s, r) => s + r.cost, 0);
+  const totalBudget = resources.reduce((s, r) => s + r.budgetCost, 0);
+  const budgetUsedPct = Math.round((totalCost / totalBudget) * 100);
+  const overBudget = resources.filter(r => r.cost / r.budgetCost > 0.85).length;
+
+  const formatUsed = (r: CloudResource) => {
+    if (r.used >= 1000000) return `${(r.used / 1000000).toFixed(1)}M`;
+    if (r.used >= 1000) return `${(r.used / 1000).toFixed(1)}K`;
+    return r.used.toString();
+  };
+
+  return (
+    <div className="space-y-5">
+      {/* Summary KPIs */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          { label: 'Total MTD Spend', value: `$${totalCost.toFixed(2)}`, icon: <DollarSign size={15} />, color: 'text-foreground', bg: 'bg-muted', iconBg: 'bg-muted' },
+          { label: 'Monthly Budget', value: `$${totalBudget.toFixed(2)}`, icon: <BarChart2 size={15} />, color: 'text-blue-700', bg: 'bg-blue-50', iconBg: 'bg-blue-100' },
+          { label: 'Budget Consumed', value: `${budgetUsedPct}%`, icon: <TrendingUp size={15} />, color: budgetUsedPct > 80 ? 'text-red-700' : 'text-emerald-700', bg: budgetUsedPct > 80 ? 'bg-red-50' : 'bg-emerald-50', iconBg: budgetUsedPct > 80 ? 'bg-red-100' : 'bg-emerald-100' },
+          { label: 'Near Budget Limit', value: `${overBudget} service${overBudget !== 1 ? 's' : ''}`, icon: <AlertTriangle size={15} />, color: overBudget > 0 ? 'text-amber-700' : 'text-green-700', bg: overBudget > 0 ? 'bg-amber-50' : 'bg-green-50', iconBg: overBudget > 0 ? 'bg-amber-100' : 'bg-green-100' },
+        ].map(kpi => (
+          <div key={kpi.label} className={`${kpi.bg} rounded-xl p-4 border border-border flex items-center gap-3`}>
+            <div className={`w-9 h-9 rounded-lg ${kpi.iconBg} flex items-center justify-center ${kpi.color} flex-shrink-0`}>{kpi.icon}</div>
+            <div>
+              <p className={`text-lg font-700 tabular-nums ${kpi.color}`}>{kpi.value}</p>
+              <p className="text-xs text-muted-foreground">{kpi.label}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Overall Budget Bar */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <div className="flex items-center justify-between mb-3">
+          <div>
+            <p className="text-sm font-700 text-foreground">Overall Cloud Budget</p>
+            <p className="text-xs text-muted-foreground mt-0.5">Month-to-date across all providers</p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button onClick={handleRefresh} className="flex items-center gap-1.5 text-xs font-600 text-muted-foreground hover:text-foreground transition-colors px-3 py-1.5 rounded-lg bg-muted border border-border">
+              <RefreshCw size={12} className={refreshing ? 'animate-spin' : ''} />
+              Refresh
+            </button>
+            {lastRefreshed && <span className="text-xs text-muted-foreground hidden sm:block">Updated {lastRefreshed}</span>}
+          </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <div className="flex-1 h-3 bg-muted rounded-full overflow-hidden">
+            <div
+              className={`h-full rounded-full transition-all duration-500 ${budgetUsedPct > 85 ? 'bg-red-500' : budgetUsedPct > 65 ? 'bg-amber-500' : 'bg-emerald-500'}`}
+              style={{ width: `${budgetUsedPct}%` }}
+            />
+          </div>
+          <span className={`text-sm font-700 tabular-nums ${budgetUsedPct > 85 ? 'text-red-700' : budgetUsedPct > 65 ? 'text-amber-700' : 'text-emerald-700'}`}>
+            {budgetUsedPct}%
+          </span>
+        </div>
+        <div className="flex justify-between mt-2">
+          <span className="text-xs text-muted-foreground">${totalCost.toFixed(2)} spent</span>
+          <span className="text-xs text-muted-foreground">${(totalBudget - totalCost).toFixed(2)} remaining of ${totalBudget.toFixed(2)}</span>
+        </div>
+      </div>
+
+      {/* Resource Breakdown */}
+      <div className="bg-card border border-border rounded-xl overflow-hidden">
+        <div className="px-5 py-3.5 border-b border-border">
+          <h3 className="text-sm font-700 text-foreground">Resource Usage vs Budget</h3>
+          <p className="text-xs text-muted-foreground mt-0.5">Compute, storage, database, and network consumption</p>
+        </div>
+        <div className="divide-y divide-border">
+          {resources.map(r => {
+            const pct = Math.min(Math.round((r.used / r.budget) * 100), 100);
+            const costPct = Math.round((r.cost / r.budgetCost) * 100);
+            const isWarning = costPct > 85;
+            return (
+              <div key={r.name} className="px-5 py-4">
+                <div className="flex items-start justify-between gap-4 mb-2">
+                  <div className="flex items-center gap-2.5">
+                    <div className={`w-8 h-8 rounded-lg bg-muted flex items-center justify-center text-muted-foreground flex-shrink-0`}>{r.icon}</div>
+                    <div>
+                      <p className="text-xs font-700 text-foreground">{r.name}</p>
+                      <p className="text-xs text-muted-foreground">{r.provider}</p>
+                    </div>
+                  </div>
+                  <div className="text-right flex-shrink-0">
+                    <p className={`text-sm font-700 tabular-nums ${isWarning ? 'text-red-700' : 'text-foreground'}`}>${r.cost.toFixed(2)}</p>
+                    <p className="text-xs text-muted-foreground">of ${r.budgetCost.toFixed(2)}</p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <div className="flex-1 h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all duration-500 ${isWarning ? 'bg-red-500' : r.color}`}
+                      style={{ width: `${pct}%` }}
+                    />
+                  </div>
+                  <span className="text-xs font-600 text-muted-foreground tabular-nums w-10 text-right">{pct}%</span>
+                  <span className={`text-xs font-600 flex items-center gap-0.5 ${r.trend > 10 ? 'text-red-600' : r.trend < 0 ? 'text-green-600' : 'text-muted-foreground'}`}>
+                    {r.trend > 0 ? '↑' : '↓'}{Math.abs(r.trend)}%
+                  </span>
+                </div>
+                <div className="flex justify-between mt-1">
+                  <span className="text-xs text-muted-foreground">{formatUsed(r)} {r.unit} used</span>
+                  <span className="text-xs text-muted-foreground">{r.budget.toLocaleString()} {r.unit} budget</span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Cost Forecast */}
+      <div className="bg-card border border-border rounded-xl p-5">
+        <h3 className="text-sm font-700 text-foreground mb-3">Cost Forecast & Alerts</h3>
+        <div className="space-y-2">
+          {[
+            { type: 'warning', msg: 'Compute (EC2) projected to exceed budget by $18 at current growth rate (+12%/day)' },
+            { type: 'info', msg: 'Database costs on track — Supabase free tier limits not reached' },
+            { type: 'success', msg: 'CDN bandwidth 76% under budget — consider downgrading reserved capacity' },
+            { type: 'warning', msg: 'Serverless invocations growing 22%/day — review edge function call frequency' },
+          ].map((alert, i) => (
+            <div key={i} className={`flex items-start gap-3 p-3 rounded-lg border text-xs ${
+              alert.type === 'warning' ? 'bg-amber-50 border-amber-100 text-amber-800' :
+              alert.type === 'success'? 'bg-green-50 border-green-100 text-green-800' : 'bg-blue-50 border-blue-100 text-blue-800'
+            }`}>
+              <span className="flex-shrink-0 mt-0.5">
+                {alert.type === 'warning' ? <AlertTriangle size={12} /> : alert.type === 'success' ? <CheckCircle size={12} /> : <Clock size={12} />}
+              </span>
+              {alert.msg}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
 }
 
 function SystemHealthWidget() {
@@ -243,7 +468,7 @@ function NotificationTestWidget() {
 }
 
 export default function AdministrationPage() {
-  const [activeTab, setActiveTab] = useState<'notifications' | 'roles' | 'health' | 'email'>('notifications');
+  const [activeTab, setActiveTab] = useState<'notifications' | 'roles' | 'health' | 'email' | 'cloud'>('notifications');
   const [prefs, setPrefs] = useState<NotifPref[]>([
     { label: 'Risk Alert Notifications', description: 'Receive alerts when customers are flagged as high or critical risk', enabled: true },
     { label: 'Milestone Completion Alerts', description: 'Get notified when customers complete key onboarding milestones', enabled: true },
@@ -258,13 +483,14 @@ export default function AdministrationPage() {
   const togglePref = (i: number) => setPrefs(prev => prev.map((p, idx) => idx === i ? { ...p, enabled: !p.enabled } : p));
 
   return (
-    <AppLayout title="Administration" subtitle="Notification preferences, role assignments, system health, and email configuration">
+    <AppLayout title="Administration" subtitle="Notification preferences, role assignments, system health, cloud costs, and email configuration">
       <div className="space-y-6">
         {/* Tabs */}
         <div className="flex gap-2 border-b border-border pb-4 flex-wrap">
           {([
             { id: 'notifications', label: 'Notification Preferences', icon: <Bell size={14} /> },
             { id: 'roles', label: 'Role Assignments', icon: <Shield size={14} /> },
+            { id: 'cloud', label: 'Cloud Cost & Resources', icon: <Cloud size={14} /> },
             { id: 'email', label: 'Email Notifications', icon: <Mail size={14} /> },
             { id: 'health', label: 'System Health', icon: <Activity size={14} /> },
           ] as const).map(tab => (
@@ -338,6 +564,9 @@ export default function AdministrationPage() {
             ))}
           </div>
         )}
+
+        {/* Cloud Cost & Resources */}
+        {activeTab === 'cloud' && <CloudCostWidget />}
 
         {/* Email Notifications */}
         {activeTab === 'email' && (

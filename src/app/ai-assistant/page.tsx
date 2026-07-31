@@ -1,8 +1,13 @@
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import AppLayout from '@/components/AppLayout';
-import { Sparkles, Send, User, RotateCcw } from 'lucide-react';
+import { Sparkles, Send, User, RotateCcw, History, Plus, Trash2, ChevronLeft } from 'lucide-react';
+import { useChat } from '@/lib/hooks/useChat';
+import { createClient } from '@/lib/supabase/client';
+import { useAuth } from '@/contexts/AuthContext';
+import toast from 'react-hot-toast';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 interface Message {
   id: string;
@@ -11,233 +16,416 @@ interface Message {
   timestamp: string;
 }
 
+interface ChatSession {
+  id: string;
+  title: string;
+  updated_at: string;
+}
+
+const SYSTEM_PROMPT = `You are the COIS AI Assistant — an intelligent Customer Onboarding Intelligence System for a B2B SaaS platform. You help Customer Success Managers analyze customer risk, track onboarding progress, and recommend actions.
+
+You have expertise in:
+- Customer health scoring and risk assessment
+- Onboarding stage analysis (Contract Signed → Kickoff → Account Setup → Configuration → Training → First Login → First Value → Go Live → Handoff)
+- Time-to-Value (TTV) optimization
+- SLA compliance and escalation management
+- Portfolio-level analytics and reporting
+
+Always be concise, data-driven, and action-oriented. Format responses with clear sections using **bold** for headers and bullet points for lists.`;
+
 const suggestedPrompts = [
   { id: 'sp-1', text: 'Which customers are most at risk this week?' },
   { id: 'sp-2', text: 'Summarize onboarding performance for Q1 2026' },
   { id: 'sp-3', text: 'What actions should I take today?' },
 ];
 
-const staticResponses: Record<string, string> = {
-  'Which customers are most at risk this week?': `Based on current onboarding data, the following customers require immediate attention this week:
-
-**🔴 Critical Risk**
-• **Vantage Capital Partners** (Enterprise, $320K ARR) — Compliance approval has been pending for 18 days. Go Live is at risk. Recommend executive escalation today.
-• **NorthBridge Logistics** (Enterprise, $168K ARR) — IT contact unresponsive for 14 days. Account provisioning is completely blocked. Escalate to their executive sponsor.
-
-**🟠 High Risk**
-• **Apex Retail Solutions** (Mid-Market, $96K ARR) — Training cannot proceed until customer confirms availability. Follow up with primary contact by EOD.
-• **Starfield Media** (SMB, $24K ARR) — No IT contact provided. Account setup blocked at day 10.
-
-**Recommended Actions:**
-1. Schedule executive calls for Vantage Capital and NorthBridge today
-2. Send formal delay notices to both Critical accounts
-3. Assign backup IT contacts for Starfield Media through their business sponsor`,
-
-  'Summarize onboarding performance for Q1 2026': `**Q1 2026 Onboarding Performance Summary**
-*January – March 2026 · B2B SaaS Platform — Demo Environment*
-
-**Volume**
-• 23 new onboardings initiated
-• 15 completed (65% completion rate)
-• 8 carried forward to Q2
-
-**Time to Value**
-• Average TTV: 58 days (vs 62-day Q4 2025 baseline)
-• Improvement: −4 days quarter-over-quarter
-• Best performer: Solaris Health Systems — 38 days TTV
-
-**Health Scores**
-• 61% of Q1 cohort achieved Excellent or Good health by Go Live
-• 3 customers required recovery plans post-Go Live
-
-**Key Wins**
-• Cascade Insurance Group reached Go Live 6 days ahead of schedule
-• Introduced Solaris Training Template — reduced training stage by 3.2 days on average
-• Zero critical escalations in January (first time in 6 quarters)
-
-**Areas for Improvement**
-• Configuration stage remains the longest bottleneck at 11.4 avg days
-• 4 customers experienced IT contact delays exceeding 10 days
-• Training scheduling conflicts caused 2 Go Live delays in March`,
-
-  'What actions should I take today?': `**Your Priority Actions for Today — Jul 24, 2026**
-
-**🔴 Urgent (Complete by 12:00 PM)**
-1. **Vantage Capital Partners** — Call Daniel Osei to confirm executive escalation status. Compliance approval is 18 days overdue.
-2. **NorthBridge Logistics** — Send formal delay notice. IT unresponsive for 14 days. Loop in Lena Müller and the customer's executive sponsor.
-
-**🟠 High Priority (Complete by EOD)**
-3. **Apex Retail Solutions** — Follow up with Marcus Webb on training scheduling. Customer availability must be confirmed today.
-4. **Starfield Media** — Request IT contact information from business sponsor. Account provisioning cannot proceed without it.
-
-**🟡 Standard (This Week)**
-5. **Nexus Property Group** — Check in with Aiko Tanaka on training progress. 11 days in stage with no update.
-6. **Cascade Insurance Group** — Prepare Go Live announcement and schedule expansion discovery call for next week.
-7. Review 3 AI Insight cards on the Executive Dashboard — mark reviewed after actioning.
-
-**📊 Metrics Check**
-• Current portfolio health: 60% Excellent/Good, 40% Fair/Poor
-• 5 active risk alerts requiring owner response
-• 8 unread notifications in your queue`,
+const initialWelcome: Message = {
+  id: 'msg-0',
+  role: 'assistant',
+  content: "Hello! I'm your COIS AI Assistant powered by OpenAI. I can help you analyze customer risk, summarize onboarding performance, and recommend actions. Select a suggested prompt below or type your own question.",
+  timestamp: '',
 };
 
-const initialMessages: Message[] = [
-  {
-    id: 'msg-0',
-    role: 'assistant',
-    content: 'Hello! I\'m your COIS AI Assistant. I can help you analyze customer risk, summarize onboarding performance, and recommend actions. Select a suggested prompt below or type your own question.',
-    timestamp: '04:14 AM',
-  },
-];
+function formatContent(text: string) {
+  return text.split('\n').map((line, i) => {
+    if (line.startsWith('**') && line.endsWith('**')) {
+      return <p key={i} className="font-700 text-foreground mt-2 first:mt-0">{line.replace(/\*\*/g, '')}</p>;
+    }
+    if (line.startsWith('• ') || line.startsWith('- ')) {
+      const parts = line.slice(2).split('**');
+      return (
+        <div key={i} className="flex gap-2 mt-1">
+          <span className="text-primary flex-shrink-0 mt-0.5">•</span>
+          <p>{parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}</p>
+        </div>
+      );
+    }
+    if (/^\d+\./.test(line)) {
+      const parts = line.split('**');
+      return (
+        <div key={i} className="flex gap-2 mt-1">
+          <span className="text-primary font-600 flex-shrink-0">{line.match(/^\d+/)?.[0]}.</span>
+          <p>{parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p.replace(/^\d+\.\s*/, ''))}</p>
+        </div>
+      );
+    }
+    if (line === '') return <div key={i} className="h-1" />;
+    const parts = line.split('**');
+    return <p key={i} className="mt-0.5">{parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}</p>;
+  });
+}
 
 export default function AIAssistantPage() {
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>([{ ...initialWelcome, timestamp: '' }]);
   const [input, setInput] = useState('');
-  const [isTyping, setIsTyping] = useState(false);
+  const [sessionId, setSessionId] = useState<string | null>(null);
+  const [sessions, setSessions] = useState<ChatSession[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const supabase = createClient();
+  const { user } = useAuth();
+
+  const { response, isLoading, error, sendMessage } = useChat('OPEN_AI', 'gpt-4o-mini', true);
+
+  // Track the last streamed response to persist it
+  const lastResponseRef = useRef('');
+  const pendingUserMsgRef = useRef<Message | null>(null);
+
+  useEffect(() => {
+    if (error) toast.error(error.message);
+  }, [error]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, isTyping]);
+  }, [messages, isLoading]);
 
-  const sendMessage = (text: string) => {
-    if (!text.trim()) return;
-    const userMsg: Message = {
-      id: `msg-${Date.now()}`,
-      role: 'user',
-      content: text,
-      timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
-    };
-    setMessages(prev => [...prev, userMsg]);
-    setInput('');
-    setIsTyping(true);
+  // Update streaming message in real-time
+  useEffect(() => {
+    if (isLoading && response) {
+      setMessages(prev => {
+        const last = prev[prev.length - 1];
+        if (last?.id === 'streaming') {
+          return [...prev.slice(0, -1), { ...last, content: response }];
+        }
+        return [...prev, {
+          id: 'streaming',
+          role: 'assistant',
+          content: response,
+          timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        }];
+      });
+      lastResponseRef.current = response;
+    }
+  }, [response, isLoading]);
 
-    setTimeout(() => {
-      const responseText = staticResponses[text] ||
-        `I've analyzed the current onboarding data for your query: **"${text}"**\n\nBased on the portfolio of 50 active customers, I recommend reviewing the Risk Alerts table on the Executive Dashboard for the most current status. For detailed analysis, check the Analytics and Reports sections.\n\nWould you like me to focus on a specific customer, stage, or metric?`;
-
-      const assistantMsg: Message = {
-        id: `msg-${Date.now() + 1}`,
+  // Finalize streaming message and persist
+  useEffect(() => {
+    if (!isLoading && lastResponseRef.current) {
+      const finalContent = lastResponseRef.current;
+      const ts = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+      const finalMsg: Message = {
+        id: `msg-${Date.now()}`,
         role: 'assistant',
-        content: responseText,
-        timestamp: new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }),
+        content: finalContent,
+        timestamp: ts,
       };
-      setIsTyping(false);
-      setMessages(prev => [...prev, assistantMsg]);
-    }, 1200);
+      setMessages(prev => {
+        const withoutStreaming = prev.filter(m => m.id !== 'streaming');
+        return [...withoutStreaming, finalMsg];
+      });
+      lastResponseRef.current = '';
+
+      // Persist to Supabase
+      if (user && pendingUserMsgRef.current) {
+        persistMessages(pendingUserMsgRef.current, finalMsg);
+        pendingUserMsgRef.current = null;
+      }
+    }
+  }, [isLoading]);
+
+  const getOrCreateSession = useCallback(async (): Promise<string | null> => {
+    if (!user) return null;
+    if (sessionId) return sessionId;
+
+    try {
+      const { data, error: err } = await supabase
+        .from('ai_chat_sessions')
+        .insert({ user_id: user.id, title: 'New Conversation', model: 'gpt-4o-mini' })
+        .select('id')
+        .single();
+      if (err) throw err;
+      setSessionId(data.id);
+      return data.id;
+    } catch {
+      return null;
+    }
+  }, [user, sessionId, supabase]);
+
+  const persistMessages = async (userMsg: Message, assistantMsg: Message) => {
+    try {
+      const sid = await getOrCreateSession();
+      if (!sid) return;
+
+      await supabase.from('ai_chat_messages').insert([
+        { session_id: sid, role: 'user', content: userMsg.content, metadata: { timestamp: userMsg.timestamp } },
+        { session_id: sid, role: 'assistant', content: assistantMsg.content, metadata: { timestamp: assistantMsg.timestamp } },
+      ]);
+
+      // Log session event
+      if (user) {
+        await supabase.from('ai_session_logs').insert({
+          session_id: sid,
+          user_id: user.id,
+          event_type: 'message_exchange',
+          payload: { user_query: userMsg.content, response_length: assistantMsg.content.length },
+        });
+      }
+
+      // Update session title from first user message
+      if (messages.filter(m => m.role === 'user').length === 0) {
+        const title = userMsg.content.slice(0, 60) + (userMsg.content.length > 60 ? '…' : '');
+        await supabase.from('ai_chat_sessions').update({ title }).eq('id', sid);
+      }
+    } catch {
+      // Silent fail — chat still works without persistence
+    }
   };
 
-  const formatContent = (text: string) => {
-    return text.split('\n').map((line, i) => {
-      if (line.startsWith('**') && line.endsWith('**')) {
-        return <p key={i} className="font-700 text-foreground mt-2 first:mt-0">{line.replace(/\*\*/g, '')}</p>;
+  const loadSessions = async () => {
+    if (!user) return;
+    setHistoryLoading(true);
+    try {
+      const { data } = await supabase
+        .from('ai_chat_sessions')
+        .select('id, title, updated_at')
+        .eq('user_id', user.id)
+        .order('updated_at', { ascending: false })
+        .limit(20);
+      setSessions(data || []);
+    } catch {
+      // ignore
+    } finally {
+      setHistoryLoading(false);
+    }
+  };
+
+  const loadSession = async (sid: string) => {
+    try {
+      const { data } = await supabase
+        .from('ai_chat_messages')
+        .select('id, role, content, metadata, created_at')
+        .eq('session_id', sid)
+        .order('created_at', { ascending: true });
+
+      if (data && data.length > 0) {
+        const loaded: Message[] = data.map(m => ({
+          id: m.id,
+          role: m.role as 'user' | 'assistant',
+          content: m.content,
+          timestamp: m.metadata?.timestamp || '',
+        }));
+        setMessages([{ ...initialWelcome, timestamp: '' }, ...loaded]);
+        setSessionId(sid);
+        setShowHistory(false);
       }
-      if (line.startsWith('• ')) {
-        const parts = line.slice(2).split('**');
-        return (
-          <div key={i} className="flex gap-2 mt-1">
-            <span className="text-primary flex-shrink-0 mt-0.5">•</span>
-            <p>{parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}</p>
-          </div>
-        );
+    } catch {
+      toast.error('Failed to load conversation');
+    }
+  };
+
+  const deleteSession = async (sid: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    try {
+      await supabase.from('ai_chat_sessions').delete().eq('id', sid);
+      setSessions(prev => prev.filter(s => s.id !== sid));
+      if (sessionId === sid) {
+        startNewChat();
       }
-      if (/^\d+\./.test(line)) {
-        const parts = line.split('**');
-        return (
-          <div key={i} className="flex gap-2 mt-1">
-            <span className="text-primary font-600 flex-shrink-0">{line.match(/^\d+/)?.[0]}.</span>
-            <p>{parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p.replace(/^\d+\.\s*/, ''))}</p>
-          </div>
-        );
-      }
-      if (line === '') return <div key={i} className="h-1" />;
-      const parts = line.split('**');
-      return <p key={i} className="mt-0.5">{parts.map((p, j) => j % 2 === 1 ? <strong key={j}>{p}</strong> : p)}</p>;
-    });
+    } catch {
+      toast.error('Failed to delete conversation');
+    }
+  };
+
+  const startNewChat = () => {
+    setMessages([{ ...initialWelcome, timestamp: '' }]);
+    setSessionId(null);
+    setShowHistory(false);
+    lastResponseRef.current = '';
+    pendingUserMsgRef.current = null;
+  };
+
+  const handleSend = (text: string) => {
+    if (!text.trim() || isLoading) return;
+
+    const ts = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    const userMsg: Message = { id: `msg-${Date.now()}`, role: 'user', content: text, timestamp: ts };
+    setMessages(prev => [...prev, userMsg]);
+    setInput('');
+    pendingUserMsgRef.current = userMsg;
+
+    // Build conversation history for context (last 10 messages)
+    const history = messages
+      .filter(m => m.id !== 'msg-0')
+      .slice(-10)
+      .map(m => ({ role: m.role as 'user' | 'assistant', content: m.content }));
+
+    sendMessage(
+      [
+        { role: 'system', content: SYSTEM_PROMPT },
+        ...history,
+        { role: 'user', content: text },
+      ],
+      { max_completion_tokens: 1024 }
+    );
   };
 
   return (
-    <AppLayout title="AI Assistant" subtitle="Powered by COIS intelligence engine · portfolio data only">
-      {/* Demo notice */}
-      <div className="mb-4 px-4 py-2.5 bg-amber-50 border border-amber-200 rounded-lg text-xs text-amber-800 italic">
-        This assistant displays pre-built sample responses for demonstration purposes.
-      </div>
-      <div className="flex flex-col h-[calc(100vh-10rem)] max-h-[700px]">
-        {/* Chat area */}
-        <div className="flex-1 overflow-y-auto bg-card border border-border rounded-xl mb-4 p-4 space-y-4">
-          {messages.map(msg => (
-            <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
-              <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-700 ${
-                msg.role === 'assistant' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
-              }`}>
-                {msg.role === 'assistant' ? <Sparkles size={13} /> : <User size={13} />}
-              </div>
-              <div className={`max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
-                <div className={`rounded-xl px-4 py-3 text-xs leading-relaxed ${
-                  msg.role === 'assistant' ?'bg-muted/50 text-foreground border border-border' :'bg-primary text-primary-foreground'
-                }`}>
-                  {msg.role === 'assistant' ? formatContent(msg.content) : <p>{msg.content}</p>}
-                </div>
-                <span className="text-xs text-muted-foreground mt-1 px-1">{msg.timestamp}</span>
-              </div>
+    <ErrorBoundary>
+      <AppLayout title="AI Assistant" subtitle="Powered by OpenAI · context-aware · portfolio intelligence">
+        <div className="flex flex-col h-[calc(100vh-10rem)] max-h-[720px]">
+          {/* Toolbar */}
+          <div className="flex items-center justify-between mb-3 gap-2">
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => { setShowHistory(!showHistory); if (!showHistory) loadSessions(); }}
+                className="flex items-center gap-1.5 text-xs px-3 py-2 bg-muted border border-border text-muted-foreground rounded-lg hover:text-foreground transition-colors"
+              >
+                <History size={13} />
+                <span className="hidden sm:inline">History</span>
+              </button>
+              <button
+                onClick={startNewChat}
+                className="flex items-center gap-1.5 text-xs px-3 py-2 bg-primary/5 border border-primary/20 text-primary rounded-lg hover:bg-primary/10 transition-colors"
+              >
+                <Plus size={13} />
+                <span className="hidden sm:inline">New Chat</span>
+              </button>
             </div>
-          ))}
-          {isTyping && (
-            <div className="flex gap-3">
-              <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
-                <Sparkles size={13} />
+            <div className="flex items-center gap-1.5 px-2.5 py-1 bg-green-50 border border-green-200 rounded-lg">
+              <span className="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse" />
+              <span className="text-xs text-green-700 font-600">Live AI</span>
+            </div>
+          </div>
+
+          {/* History panel */}
+          {showHistory && (
+            <div className="mb-3 bg-card border border-border rounded-xl overflow-hidden">
+              <div className="flex items-center justify-between px-4 py-2.5 border-b border-border">
+                <span className="text-xs font-700 text-foreground">Recent Conversations</span>
+                <button onClick={() => setShowHistory(false)} className="text-muted-foreground hover:text-foreground">
+                  <ChevronLeft size={14} />
+                </button>
               </div>
-              <div className="bg-muted/50 border border-border rounded-xl px-4 py-3">
-                <div className="flex gap-1 items-center h-4">
-                  <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-                  <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-                  <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
-                </div>
+              <div className="max-h-48 overflow-y-auto divide-y divide-border">
+                {historyLoading ? (
+                  <div className="px-4 py-3 text-xs text-muted-foreground">Loading…</div>
+                ) : sessions.length === 0 ? (
+                  <div className="px-4 py-3 text-xs text-muted-foreground">
+                    {user ? 'No saved conversations yet.' : 'Sign in to save chat history.'}
+                  </div>
+                ) : sessions.map(s => (
+                  <div
+                    key={s.id}
+                    onClick={() => loadSession(s.id)}
+                    className="flex items-center justify-between px-4 py-2.5 hover:bg-muted/50 cursor-pointer group"
+                  >
+                    <div className="min-w-0">
+                      <p className="text-xs font-600 text-foreground truncate">{s.title}</p>
+                      <p className="text-xs text-muted-foreground">{new Date(s.updated_at).toLocaleDateString()}</p>
+                    </div>
+                    <button
+                      onClick={(e) => deleteSession(s.id, e)}
+                      className="opacity-0 group-hover:opacity-100 text-muted-foreground hover:text-destructive transition-all ml-2 flex-shrink-0"
+                    >
+                      <Trash2 size={12} />
+                    </button>
+                  </div>
+                ))}
               </div>
             </div>
           )}
-          <div ref={bottomRef} />
-        </div>
 
-        {/* Suggested prompts */}
-        <div className="flex gap-2 flex-wrap mb-3">
-          {suggestedPrompts.map(p => (
+          {/* Chat area */}
+          <div className="flex-1 overflow-y-auto bg-card border border-border rounded-xl mb-3 p-4 space-y-4 min-h-0">
+            {messages.map(msg => (
+              <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'flex-row-reverse' : ''}`}>
+                <div className={`w-7 h-7 rounded-full flex items-center justify-center flex-shrink-0 text-xs font-700 ${
+                  msg.role === 'assistant' ? 'bg-primary/10 text-primary' : 'bg-muted text-muted-foreground'
+                }`}>
+                  {msg.role === 'assistant' ? <Sparkles size={13} /> : <User size={13} />}
+                </div>
+                <div className={`max-w-[85%] sm:max-w-[80%] ${msg.role === 'user' ? 'items-end' : 'items-start'} flex flex-col`}>
+                  <div className={`rounded-xl px-4 py-3 text-xs leading-relaxed ${
+                    msg.role === 'assistant' ?'bg-muted/50 text-foreground border border-border' :'bg-primary text-primary-foreground'
+                  }`}>
+                    {msg.role === 'assistant' ? formatContent(msg.content) : <p>{msg.content}</p>}
+                  </div>
+                  {msg.timestamp && (
+                    <span className="text-xs text-muted-foreground mt-1 px-1">{msg.timestamp}</span>
+                  )}
+                </div>
+              </div>
+            ))}
+            {isLoading && !response && (
+              <div className="flex gap-3">
+                <div className="w-7 h-7 rounded-full bg-primary/10 text-primary flex items-center justify-center flex-shrink-0">
+                  <Sparkles size={13} />
+                </div>
+                <div className="bg-muted/50 border border-border rounded-xl px-4 py-3">
+                  <div className="flex gap-1 items-center h-4">
+                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 bg-muted-foreground rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+                  </div>
+                </div>
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </div>
+
+          {/* Suggested prompts */}
+          <div className="flex gap-2 flex-wrap mb-3">
+            {suggestedPrompts.map(p => (
+              <button
+                key={p.id}
+                onClick={() => handleSend(p.text)}
+                disabled={isLoading}
+                className="text-xs px-3 py-2 bg-primary/5 border border-primary/20 text-primary rounded-lg hover:bg-primary/10 transition-all duration-150 font-500 disabled:opacity-50"
+              >
+                {p.text}
+              </button>
+            ))}
+          </div>
+
+          {/* Input */}
+          <div className="flex gap-2">
+            <input
+              type="text"
+              value={input}
+              onChange={e => setInput(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && !e.shiftKey && handleSend(input)}
+              placeholder="Ask about customer risk, onboarding performance, or recommended actions…"
+              disabled={isLoading}
+              className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none focus:ring-2 focus:ring-primary/30 disabled:opacity-60 min-w-0"
+            />
             <button
-              key={p.id}
-              onClick={() => sendMessage(p.text)}
-              className="text-xs px-3 py-2 bg-primary/5 border border-primary/20 text-primary rounded-lg hover:bg-primary/10 transition-all duration-150 font-500"
+              onClick={() => handleSend(input)}
+              disabled={!input.trim() || isLoading}
+              className="px-4 py-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed flex-shrink-0"
             >
-              {p.text}
+              <Send size={16} />
             </button>
-          ))}
+            <button
+              onClick={startNewChat}
+              className="px-3 py-3 bg-muted text-muted-foreground rounded-xl hover:text-foreground transition-all duration-150 flex-shrink-0"
+              title="Reset conversation"
+            >
+              <RotateCcw size={15} />
+            </button>
+          </div>
         </div>
-
-        {/* Input */}
-        <div className="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onChange={e => setInput(e.target.value)}
-            onKeyDown={e => e.key === 'Enter' && !e.shiftKey && sendMessage(input)}
-            placeholder="Ask about customer risk, onboarding performance, or recommended actions…"
-            className="flex-1 bg-card border border-border rounded-xl px-4 py-3 text-sm text-foreground placeholder-muted-foreground outline-none focus:ring-2 focus:ring-primary/30"
-          />
-          <button
-            onClick={() => sendMessage(input)}
-            disabled={!input.trim() || isTyping}
-            className="px-4 py-3 bg-primary text-primary-foreground rounded-xl hover:bg-primary/90 transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed"
-          >
-            <Send size={16} />
-          </button>
-          <button
-            onClick={() => setMessages(initialMessages)}
-            className="px-3 py-3 bg-muted text-muted-foreground rounded-xl hover:text-foreground transition-all duration-150"
-            title="Reset conversation"
-          >
-            <RotateCcw size={15} />
-          </button>
-        </div>
-      </div>
-    </AppLayout>
+      </AppLayout>
+    </ErrorBoundary>
   );
 }
