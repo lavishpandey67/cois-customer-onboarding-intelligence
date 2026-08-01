@@ -2,7 +2,7 @@
 
 > A production-grade B2B SaaS CS operations platform. Built to demonstrate product thinking, KPI architecture, RBAC design, and AI-assisted risk detection in a customer success operations context.
 
-**Live Demo:** https://cois-tau.vercel.app  
+**Live Demo:** https://cois-indol.vercel.app/  
 **GitHub:** https://github.com/lavishpandey67/cois-customer-onboarding-intelligence  
 **Built by:** Lavish Pandey · [LinkedIn](https://linkedin.com/in/lavish-pandey-2846273a4) · lavishpandey67@gmail.com
 
